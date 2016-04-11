@@ -1,0 +1,55 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "process_samples", "process_samples.vcxproj", "{BAF53241-02A5-4F78-8524-65415A6348E8}"
+	ProjectSection(ProjectDependencies) = postProject
+		{15AFC998-BBE3-43F4-AC13-787928C2A64D} = {15AFC998-BBE3-43F4-AC13-787928C2A64D}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "process_GUI", "process_GUI\process_GUI.vcxproj", "{B12702AD-ABFB-343A-A199-8E24837244A3}"
+	ProjectSection(ProjectDependencies) = postProject
+		{BAF53241-02A5-4F78-8524-65415A6348E8} = {BAF53241-02A5-4F78-8524-65415A6348E8}
+		{15AFC998-BBE3-43F4-AC13-787928C2A64D} = {15AFC998-BBE3-43F4-AC13-787928C2A64D}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cuda_module", "cuda_module\cuda_module.vcxproj", "{15AFC998-BBE3-43F4-AC13-787928C2A64D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BAF53241-02A5-4F78-8524-65415A6348E8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{BAF53241-02A5-4F78-8524-65415A6348E8}.Debug|Win32.Build.0 = Debug|Win32
+		{BAF53241-02A5-4F78-8524-65415A6348E8}.Debug|x64.ActiveCfg = Debug|x64
+		{BAF53241-02A5-4F78-8524-65415A6348E8}.Debug|x64.Build.0 = Debug|x64
+		{BAF53241-02A5-4F78-8524-65415A6348E8}.Release|Win32.ActiveCfg = Release|Win32
+		{BAF53241-02A5-4F78-8524-65415A6348E8}.Release|Win32.Build.0 = Release|Win32
+		{BAF53241-02A5-4F78-8524-65415A6348E8}.Release|x64.ActiveCfg = Release|x64
+		{BAF53241-02A5-4F78-8524-65415A6348E8}.Release|x64.Build.0 = Release|x64
+		{B12702AD-ABFB-343A-A199-8E24837244A3}.Debug|Win32.ActiveCfg = Debug|Win32
+		{B12702AD-ABFB-343A-A199-8E24837244A3}.Debug|Win32.Build.0 = Debug|Win32
+		{B12702AD-ABFB-343A-A199-8E24837244A3}.Debug|x64.ActiveCfg = Debug|x64
+		{B12702AD-ABFB-343A-A199-8E24837244A3}.Debug|x64.Build.0 = Debug|x64
+		{B12702AD-ABFB-343A-A199-8E24837244A3}.Release|Win32.ActiveCfg = Release|Win32
+		{B12702AD-ABFB-343A-A199-8E24837244A3}.Release|Win32.Build.0 = Release|Win32
+		{B12702AD-ABFB-343A-A199-8E24837244A3}.Release|x64.ActiveCfg = Release|x64
+		{B12702AD-ABFB-343A-A199-8E24837244A3}.Release|x64.Build.0 = Release|x64
+		{15AFC998-BBE3-43F4-AC13-787928C2A64D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{15AFC998-BBE3-43F4-AC13-787928C2A64D}.Debug|Win32.Build.0 = Debug|Win32
+		{15AFC998-BBE3-43F4-AC13-787928C2A64D}.Debug|x64.ActiveCfg = Debug|x64
+		{15AFC998-BBE3-43F4-AC13-787928C2A64D}.Debug|x64.Build.0 = Debug|x64
+		{15AFC998-BBE3-43F4-AC13-787928C2A64D}.Release|Win32.ActiveCfg = Release|Win32
+		{15AFC998-BBE3-43F4-AC13-787928C2A64D}.Release|Win32.Build.0 = Release|Win32
+		{15AFC998-BBE3-43F4-AC13-787928C2A64D}.Release|x64.ActiveCfg = Release|x64
+		{15AFC998-BBE3-43F4-AC13-787928C2A64D}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
