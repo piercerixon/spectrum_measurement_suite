@@ -102,8 +102,6 @@ void procThread::run(){
 
 	mutex.lock();
 	int filenum_max = this->filenum_max;
-	condition.wait(&mutex); //will wait untill first time to be told to run
-	restart = false;
 	mutex.unlock();
 	qDebug() << "Display first plot";
 	//Infinite event loop //forever
@@ -114,14 +112,19 @@ void procThread::run(){
 		//THIS IS TO BE USED TO COPY STUFF FROM THE NOTIFY FUNCTION VIA THE OBJECT
 		//for example, the ranges should be copied accross
 		int reqFrame = this->requestedFrame;
+		int frameMax = this->frame_rng_max;
+		int frameMin = this->frame_rng_min;
 		mutex.unlock();
+
+		qDebug() << "reqFrame: " << reqFrame;
 
 		//Core processing
 		//calculate where in the sample set the reqFrame exists THIS CURRENTLY ASSUMES THE MAX FILE SIZE IS 4GB
 
 		//frame number * number of samples required to build a frame / max filesize = file number
 		//this will absolutely need to be modified when the averaging is fixed.
-		if (reqFrame < frame_rng_max || reqFrame >= frame_rng_min || unInit) {
+		if (reqFrame < frameMin || reqFrame > frameMax || unInit) {
+			qDebug() << "req: " << reqFrame << " rng_min: " << frameMin << " rng_max: " << frameMax;
 			unInit = false;
 
 			//reqFrame - 1 to take into account the samples required prior to perform the averaging
@@ -129,11 +132,11 @@ void procThread::run(){
 				qDebug() << "This is a pretty small file ... cant handle it ... yet, let me know if its necessary";
 				this->~procThread();
 			}
-			else if (reqFrame < 101) { //case where we are closer than 100 to the beginning
+			else if (reqFrame <= 100) { //case where we are closer than 100 to the beginning
 				reqFile = filenum_base;
 				sampstart = 0;
 				t_rng_min = 0;
-				t_rng_max = 409;
+				t_rng_max = 408;
 			}
 			else if (reqFrame + 309 > t_maxFrames) { //case where we will overflow
 				reqFile = filenum_base + std::floor(((t_maxFrames - 409) * FRAME_SIZE) / FOUR_GB);
@@ -154,7 +157,7 @@ void procThread::run(){
 
 			mutex.lock();
 			this->frame_rng_min = t_rng_min;
-			this->frame_rng_max = t_rng_min;
+			this->frame_rng_max = t_rng_max;
 			mutex.unlock();
 
 		//as the samples to read are only half that of the typical sample file, this does not have to be recursive.			
@@ -192,29 +195,20 @@ void procThread::run(){
 					qDebug() << "Additional bytes read: " << in_samples.gcount();
 				}
 			}
+
+			currwins = (bytesread / (4 * WIN_SAMPS * averaging)) * averaging;
 		//	}
 
-			processed_ptr_base = (float*)realloc(processed_ptr_base, sizeof(float) * WIN_SAMPS * 409 / averaging);
-			processed_ptr = processed_ptr_base;
-			processed_ptr+=((reqFrame - t_rng_min)*WIN_SAMPS); //Point to the correct sample set
+			processed_ptr_base = (float*)realloc(processed_ptr_base, sizeof(float) * WIN_SAMPS * currwins / averaging);
 
 			//FFT the samples and store them in processed_ptr_base
-			dothething(re, processed_ptr_base, averaging, 409);
+			dothething(re, processed_ptr_base, averaging, currwins);
 
-			for (int i = 0; i < 10; i++) {
-				qDebug() << "re: " << re[i].real() << "," << re[i].imag() << "processed_ptr: " << processed_ptr_base[i];
-			}
-		}
-
-		else { //frame already computed, and stored in processed_ptr_base
-
-			qDebug() << "else :D";
-
-			processed_ptr = processed_ptr_base;
-			processed_ptr += ((reqFrame - t_rng_min)*WIN_SAMPS); //Point to the correct sample set
-		}
+		} //if the frames dont have to be recalculated, this statement will not be executed.
 
 		//emit some things after junk done
+		processed_ptr = &processed_ptr_base[(reqFrame - t_rng_min)*WIN_SAMPS];
+		//processed_ptr += ((reqFrame - t_rng_min)*WIN_SAMPS);
 		preparePlot(processed_ptr, WIN_SAMPS);
 
 		//Need to do cheeky cuda things here, the biggest blocking call is reading the samples in

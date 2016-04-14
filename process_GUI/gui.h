@@ -21,6 +21,8 @@ private:
 	void initUi();
 	Ui::guiClass ui;
 	procThread thread;
+	QCPDataMap* plotMapAvg = new QCPDataMap;
+	QCPDataMap* plotMapMax = new QCPDataMap;
 };
 
 #endif // GUI_H

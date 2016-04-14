@@ -1,5 +1,7 @@
 #include "gui.h"
 #include "keyPressFilter.h"
+#include "arrowPressFilter.h"
+#include <boost/lexical_cast.hpp>
 
 gui::gui(QWidget *parent)
 	: QMainWindow(parent)
@@ -39,10 +41,17 @@ void gui::initUi() {
 	fft_plot->yAxis->setRange(-140, 0);
 	fft_plot->xAxis->setRange(0, 2048);
 
+
+	arrowPressFilter* plotfilter = new arrowPressFilter(ui.pushButton, ui.textEdit);
+	fft_plot->installEventFilter(plotfilter);
+
 	keyPressFilter* filter = new keyPressFilter(ui.pushButton);
 	ui.textEdit->installEventFilter(filter);
 
+
 	//Connect worker thread to gui plotting function
+	fft_plot->graph(0)->setData(plotMapAvg, false);
+	fft_plot->graph(1)->setData(plotMapMax, false);
 
 	qRegisterMetaType<QVector <double> >("QVector <double>");
 	connect(&thread, SIGNAL(plotSignal(QVector<double>, QVector<double>)), this, SLOT(plotSlot(QVector<double>, QVector<double>)));
@@ -53,11 +62,11 @@ void gui::plotSlot(QVector<double> yAvg, QVector<double> yMax){
 	qDebug() << "signal received";
 	QCustomPlot* fft_plot = ui.plot_0;
 
-	QVector <double> x(yAvg.length());
-	for (int i = 0; i < yAvg.length(); i++) x[i] = i+1;
-	
-	fft_plot->graph(0)->setData(x, yAvg);
-	fft_plot->graph(1)->setData(x, yMax);
+	for (int i = 0; i < yAvg.length(); i++) {
+		plotMapAvg->insert((double)i, QCPData((double)(i + 1), yAvg[i]));
+		plotMapMax->insert((double)i, QCPData((double)(i + 1), yMax[i]));
+	}
+
 	fft_plot->replot();
 	qDebug() << "Plot updated!";
 }
@@ -70,7 +79,8 @@ void gui::scanSlot() {
 	int frameInt = frameStr.toInt(&valid, 10);
 
 	if (valid){
-		qDebug() << frameStr;
+		//qDebug() << frameStr;
+		ui.textEdit->setText(QString::fromStdString(boost::lexical_cast<std::string>(frameInt)));
 		thread.requestUpdate(frameInt);
 	}
 	else qDebug() << "Input is not a number";

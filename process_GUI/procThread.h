@@ -60,7 +60,7 @@ private:
 	int filenum_base = -1; //setup will modify this, if -1, then no samples have been selected.
 	int filenum_max = -1; //similarly to base, if -1, no max.
 
-	int requestedFrame = -1;
+	int requestedFrame = 0;
 	int frame_rng_min = 0;
 	int frame_rng_max = 1;
 
