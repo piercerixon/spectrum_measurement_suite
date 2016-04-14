@@ -1,4 +1,3 @@
-
 #include "procThread.h"
 
 #include <string>
@@ -7,10 +6,9 @@
 #include <sys/stat.h>
 #include <boost/lexical_cast.hpp>
 
-#include "cuda_module.h"
-
-
 void procThread::selectFile(char* file) {
+
+	sleep(1);
 
 	OPENFILENAMEA openfile = { 0 };  //http://www.cplusplus.com/forum/windows/82432/ Thanks Disch!
 
@@ -29,14 +27,15 @@ void procThread::selectFile(char* file) {
 	{
 		//No file selected
 		std::cout << "No file selected!\n\n" << "Terminating";
-		qDebug() << "No file selected!";
-		exit(0);
+		qDebug() << "No file selected! Destroying";
+		this->~procThread();
 	}
 	else
 	{
 		//File selected
 		std::cout << "Loading file: " << file << std::endl;
 	}
+
 }
 
 void procThread::setup() {
@@ -44,6 +43,11 @@ void procThread::setup() {
 	mutex.lock();
 	selectFile(selection);
 	
+	if (selection == NULL) {
+		qDebug() << "No file has been selected, this thread will now terminate";
+		this->~procThread();
+	}
+
 	//Configuration
 	std::string base = selection;	
 	qDebug(base.c_str());
@@ -54,6 +58,7 @@ void procThread::setup() {
 	std::string cfgfile = path + "sample_config.cfg";
 	std::cout << cfgfile << std::endl;
 
+	std::ifstream config;
 	config = std::ifstream(cfgfile, std::ifstream::in);
 	if (config.fail()) {
 		std::cout << "\nPlease ensure that cfg file is in the same directory as the samples!\n\nThis program will now terminate" << std::endl;
@@ -67,6 +72,7 @@ void procThread::setup() {
 	int i = 0;
 
 	if (config.is_open()){
+		mutex.lock();
 		while (std::getline(config, line)) {
 			sin.clear();
 			sin.str(line);
@@ -83,7 +89,10 @@ void procThread::setup() {
 			std::cout << line << std::endl;
 			i++;
 		}
+		mutex.unlock();
 	}
+
+	if (config.is_open()) config.close();
 
 	//Sample Files
 	std::string filenum_s = token.substr(token.find_last_of("_") + 1, (token.find(".dat") - token.find_last_of("_") - 1)); //extract the number of the sample file
@@ -135,7 +144,7 @@ void procThread::setup() {
 void procThread::requestUpdate(int frame) {
 
 	//perform initial checks
-	if (filenum_base > -1 && filenum_max > -1) { 
+	if (filenum_base == -1 || filenum_max == -1) { 
 		qDebug() << "Illegal filenumber range, destroying";
 		this->~procThread();
 	}

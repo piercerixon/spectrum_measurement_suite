@@ -71,6 +71,12 @@
     <ClCompile Include="procFunctions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_keyPressFilter.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_keyPressFilter.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="gui.h">
@@ -86,6 +92,9 @@
       <Filter>Header Files</Filter>
     </CustomBuild>
     <CustomBuild Include="procThread.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="keyPressFilter.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
   </ItemGroup>

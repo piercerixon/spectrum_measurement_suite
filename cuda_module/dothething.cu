@@ -178,6 +178,8 @@ static __global__ void avg_out(float* out, cuComplex* d_fft, const int num_wins,
 	cuComplex* d_fft_ptr = &d_fft[0];
 	const float threshold = -113;
 
+	bool THRESHOLD = false;
+
 	for (int j = 0; j < num_wins/averaging; j++){
 
 		for (int i = blockIdx.x * blockDim.x + idx; i < NUM_SAMPS*averaging; i += blockDim.x * gridDim.x){
@@ -189,11 +191,14 @@ static __global__ void avg_out(float* out, cuComplex* d_fft, const int num_wins,
 
 //		__syncthreads();
 
-		out_ptr[(NUM_SAMPS / 2 + blockIdx.x * blockDim.x + idx) % NUM_SAMPS] = ((out_ptr[(NUM_SAMPS / 2 + blockIdx.x * blockDim.x + idx) % NUM_SAMPS] / averaging + offset) <= threshold) ? 1 : 0;
-		//out_ptr[(NUM_SAMPS / 2 + blockIdx.x * blockDim.x + idx) % NUM_SAMPS] = (out_ptr[(NUM_SAMPS / 2 + blockIdx.x * blockDim.x + idx) % NUM_SAMPS] / averaging + offset);// <= threshold) ? 1 : 0;
-
+		if (THRESHOLD){
+			out_ptr[(NUM_SAMPS / 2 + blockIdx.x * blockDim.x + idx) % NUM_SAMPS] = ((out_ptr[(NUM_SAMPS / 2 + blockIdx.x * blockDim.x + idx) % NUM_SAMPS] / averaging + offset) <= threshold) ? 1 : 0;
+		}
+		else {
+			out_ptr[(NUM_SAMPS / 2 + blockIdx.x * blockDim.x + idx) % NUM_SAMPS] = (out_ptr[(NUM_SAMPS / 2 + blockIdx.x * blockDim.x + idx) % NUM_SAMPS] / averaging + offset);
+		}
 //		if (out_ptr[blockIdx.x * blockDim.x + idx] <= threshold) out_ptr[blockIdx.x * blockDim.x + idx] = 1;
-//		else out_ptr[blockIdx.x * blockDim.x + idx] = 0;
+//		elseP out_ptr[blockIdx.x * blockDim.x + idx] = 0;
 
 		out_ptr += NUM_SAMPS; //increment out_ptr by one frame of averages
 		d_fft_ptr += NUM_SAMPS*averaging; //increment d_fft_ptr by number of frames averaged

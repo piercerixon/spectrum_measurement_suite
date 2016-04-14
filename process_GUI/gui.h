@@ -15,6 +15,7 @@ public:
 
 private slots:
 	void plotSlot(QVector<double>, QVector<double>);
+	void scanSlot();
 
 private:
 	void initUi();

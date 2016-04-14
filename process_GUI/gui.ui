@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>600</width>
-    <height>400</height>
+    <width>1383</width>
+    <height>811</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,11 +17,43 @@
    <widget class="QCustomPlot" name="plot_0" native="true">
     <property name="geometry">
      <rect>
-      <x>120</x>
+      <x>180</x>
       <y>40</y>
-      <width>361</width>
-      <height>251</height>
+      <width>1151</width>
+      <height>691</height>
      </rect>
+    </property>
+   </widget>
+   <widget class="QTextEdit" name="textEdit">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>60</y>
+      <width>101</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="focusPolicy">
+     <enum>Qt::ClickFocus</enum>
+    </property>
+    <property name="acceptDrops">
+     <bool>false</bool>
+    </property>
+    <property name="inputMethodHints">
+     <set>Qt::ImhDigitsOnly</set>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>100</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Scan</string>
     </property>
    </widget>
   </widget>
@@ -30,7 +62,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>600</width>
+     <width>1383</width>
      <height>21</height>
     </rect>
    </property>

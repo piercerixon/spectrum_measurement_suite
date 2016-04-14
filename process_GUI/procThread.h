@@ -11,7 +11,12 @@
 
 const int MIN5 = 5722;
 const int WIN_SAMPS = 131072;
-const double TWO_GB = std::pow(2.0, 31);
+
+#ifndef TWO_FOUR_GB
+#define TWO_FOUR_GB
+const int64_t TWO_GB = std::pow(2.0, 31);
+const int64_t FOUR_GB = std::pow(2.0, 32);
+#endif
 
 class procThread : public QThread {
 	
@@ -47,20 +52,17 @@ private:
 	//TEMPORARY
 	int64_t averaging = 10;
 
-	int64_t bytes_to_read = (TWO_GB / (sizeof(std::complex<short>) * WIN_SAMPS * averaging)) *(WIN_SAMPS * sizeof(std::complex<short>)  * averaging);
-
 	//Configuration variables
 	float centre_freq, samp_rate, bandwidth, rx_gain;
 	long long maxFrames = 0; //Note, under the current implementation, this will result in dropped frames (remainder from %10).
 	std::string device, filename;
-	std::ifstream config; //watch this one for errors bru
 
 	int filenum_base = -1; //setup will modify this, if -1, then no samples have been selected.
 	int filenum_max = -1; //similarly to base, if -1, no max.
 
 	int requestedFrame = -1;
-	int frame_rng_min = -1;
-	int frame_rng_max = -1;
+	int frame_rng_min = 0;
+	int frame_rng_max = 1;
 
 };
 

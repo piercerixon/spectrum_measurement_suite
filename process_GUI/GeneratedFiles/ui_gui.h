@@ -17,7 +17,9 @@
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMenuBar>
+#include <QtWidgets/QPushButton>
 #include <QtWidgets/QStatusBar>
+#include <QtWidgets/QTextEdit>
 #include <QtWidgets/QToolBar>
 #include <QtWidgets/QWidget>
 #include "qcustomplot.h"
@@ -30,6 +32,8 @@ public:
     QAction *actionExit;
     QWidget *centralWidget;
     QCustomPlot *plot_0;
+    QTextEdit *textEdit;
+    QPushButton *pushButton;
     QMenuBar *menuBar;
     QMenu *menuOptions;
     QToolBar *mainToolBar;
@@ -39,18 +43,27 @@ public:
     {
         if (guiClass->objectName().isEmpty())
             guiClass->setObjectName(QStringLiteral("guiClass"));
-        guiClass->resize(600, 400);
+        guiClass->resize(1383, 811);
         actionExit = new QAction(guiClass);
         actionExit->setObjectName(QStringLiteral("actionExit"));
         centralWidget = new QWidget(guiClass);
         centralWidget->setObjectName(QStringLiteral("centralWidget"));
         plot_0 = new QCustomPlot(centralWidget);
         plot_0->setObjectName(QStringLiteral("plot_0"));
-        plot_0->setGeometry(QRect(120, 40, 361, 251));
+        plot_0->setGeometry(QRect(180, 40, 1151, 691));
+        textEdit = new QTextEdit(centralWidget);
+        textEdit->setObjectName(QStringLiteral("textEdit"));
+        textEdit->setGeometry(QRect(20, 60, 101, 31));
+        textEdit->setFocusPolicy(Qt::ClickFocus);
+        textEdit->setAcceptDrops(false);
+        textEdit->setInputMethodHints(Qt::ImhDigitsOnly);
+        pushButton = new QPushButton(centralWidget);
+        pushButton->setObjectName(QStringLiteral("pushButton"));
+        pushButton->setGeometry(QRect(30, 100, 75, 23));
         guiClass->setCentralWidget(centralWidget);
         menuBar = new QMenuBar(guiClass);
         menuBar->setObjectName(QStringLiteral("menuBar"));
-        menuBar->setGeometry(QRect(0, 0, 600, 21));
+        menuBar->setGeometry(QRect(0, 0, 1383, 21));
         menuOptions = new QMenu(menuBar);
         menuOptions->setObjectName(QStringLiteral("menuOptions"));
         guiClass->setMenuBar(menuBar);
@@ -74,6 +87,7 @@ public:
     {
         guiClass->setWindowTitle(QApplication::translate("guiClass", "gui", 0));
         actionExit->setText(QApplication::translate("guiClass", "Exit", 0));
+        pushButton->setText(QApplication::translate("guiClass", "Scan", 0));
         menuOptions->setTitle(QApplication::translate("guiClass", "Options", 0));
     } // retranslateUi
 
