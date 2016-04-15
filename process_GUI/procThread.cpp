@@ -137,18 +137,24 @@ void procThread::run(){
 				sampstart = 0;
 				t_rng_min = 0;
 				t_rng_max = 408;
+
+				qDebug() << "start - min: " << t_rng_min << " max: " << t_rng_max;
 			}
-			else if (reqFrame + 309 > t_maxFrames) { //case where we will overflow
-				reqFile = filenum_base + std::floor(((t_maxFrames - 409) * FRAME_SIZE) / FOUR_GB);
-				sampstart = (((t_maxFrames - 409) * FRAME_SIZE)) % FOUR_GB;
-				t_rng_min = t_maxFrames - 409;
+			else if (reqFrame + 308 > t_maxFrames) { //case where we will overflow
+				reqFile = filenum_base + std::floor(((t_maxFrames - 408) * FRAME_SIZE) / FOUR_GB);
+				sampstart = (((t_maxFrames - 408) * FRAME_SIZE)) % FOUR_GB;
+				t_rng_min = t_maxFrames - 408;
 				t_rng_max = t_maxFrames;
+
+				qDebug() << "end - min: " << t_rng_min << " max: " << t_rng_max;
 			}
 			else { //every other case
-				reqFile = filenum_base + std::floor(((reqFrame - 101) * FRAME_SIZE) / FOUR_GB);
-				sampstart = (((reqFrame - 1) * FRAME_SIZE)) % FOUR_GB;
-				t_rng_min = reqFrame - 101;
+				reqFile = filenum_base + std::floor(((reqFrame - 100) * FRAME_SIZE) / FOUR_GB);
+				sampstart = (((reqFrame - 100) * FRAME_SIZE)) % FOUR_GB;
+				t_rng_min = reqFrame - 100;
 				t_rng_max = reqFrame + 308;
+
+				qDebug() << "general - min: " << t_rng_min << " max: " << t_rng_max;
 			}
 
 			//calculate sampstart
@@ -193,10 +199,11 @@ void procThread::run(){
 					in_samples.open(sampfile, std::ifstream::binary);
 					in_samples.read((char*)re, bytesleft);
 					qDebug() << "Additional bytes read: " << in_samples.gcount();
+					bytesread += in_samples.gcount();
 				}
 			}
 
-			currwins = (bytesread / (4 * WIN_SAMPS * averaging)) * averaging;
+			currwins = (bytesread / (4 * WIN_SAMPS * averaging)) * averaging; //this is done to drop the decimal
 		//	}
 
 			processed_ptr_base = (float*)realloc(processed_ptr_base, sizeof(float) * WIN_SAMPS * currwins / averaging);
@@ -208,6 +215,7 @@ void procThread::run(){
 
 		//emit some things after junk done
 		processed_ptr = &processed_ptr_base[(reqFrame - t_rng_min)*WIN_SAMPS];
+		qDebug() << "processed_ptr idx: " << (reqFrame - t_rng_min) << "* WIN_SAMPS";
 		//processed_ptr += ((reqFrame - t_rng_min)*WIN_SAMPS);
 		preparePlot(processed_ptr, WIN_SAMPS);
 
