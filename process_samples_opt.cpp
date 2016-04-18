@@ -190,7 +190,9 @@ int python_test() { //This will be deprecated in due time
 int main(int argc, char*argv[]) {
 	//Very exciting main
 
-	char* dataset = select_file();
+	char dataset[MAX_PATH] = "";
+	
+	select_file(dataset);
 
 	read_samples_plot(dataset);
 	return(0);
@@ -450,6 +452,11 @@ void create_folders(){
 	CreateDirectory(path4, NULL);
 	char path5[] = "\.\\24hr";
 	CreateDirectory(path5, NULL);*/
+
+	char path01[] = "\.\\5min\\log";
+	CreateDirectory(path01, NULL);
+	char path02[] = "\.\\5min\\lin";
+	CreateDirectory(path02, NULL);
 }
 
 void call_py_plot(double *inArr, int scale, int id, double total) {
@@ -457,7 +464,7 @@ void call_py_plot(double *inArr, int scale, int id, double total) {
 	if (PyCallable_Check(pFunc)) {
 
 		const int arry_H = 1;
-		npy_intp arry_W[arry_H] = { MIN5 }; //The way to read this is: array[array_height][array_width]
+		npy_intp arry_W[arry_H] = { MIN5*10 }; //The way to read this is: array[array_height][array_width]
 		//THIS NEEDS TO BE MODIFIED to adapt to the longest timescale that is detected. 
 		
 		//std::cout << "Cast array\n";
@@ -528,7 +535,7 @@ PyObject* init_py_function(char* py_file, char* fName) {
 
 	PyObject *pName, *pModule, *pFn;
 
-	//create_folders();
+	create_folders();
 
 	pName = PyUnicode_FromString(py_file);
 	pModule = PyImport_Import(pName);
@@ -709,8 +716,8 @@ void read_samples(char* sampbase){
 		if (bytesread) {
 			std::cout << "\nFile part " << currfile << " of " << filenum_i << " Loaded" << std::endl;
 
-			processed_ptr = (float*)realloc(processed_ptr, sizeof(float) * WIN_SAMPS * currwins / averaging);
-			dothething(re, processed_ptr, averaging, currwins);
+			processed_ptr = (float*)realloc(processed_ptr, sizeof(float) * WIN_SAMPS * currwins);
+			perform_fft(re, processed_ptr, WIN_SAMPS, averaging, currwins);
 			//processed_ptr = dothething(re, averaging, currwins);
 			//processed_ptr = dothething_overlap(re, averaging, processed_ptr, currwins, samp_overlap);
 
@@ -724,13 +731,13 @@ void read_samples(char* sampbase){
 				frame_number++;
 
 				//detect(processed_ptr, (currwins / averaging) - 1, ws_array, overlap, w_vec_ptr, &frame_number);
-				detect_ts(processed_ptr, (currwins / averaging) - 1, ws_array, w_vec_ptr, &frame_number);
+				detect_ts(processed_ptr, currwins - 1, ws_array, w_vec_ptr, &frame_number);
 				//detect(processed_ptr, ((currwins*samp_overlap) / averaging) - 1, ws_array, overlap, w_vec_ptr, &frame_number);
 			}
 			else {
 				frame_number++;
 				//detect(processed_ptr, (currwins / averaging), ws_array, overlap, w_vec_ptr, &frame_number);
-				detect_ts(processed_ptr, (currwins / averaging), ws_array, w_vec_ptr, &frame_number);
+				detect_ts(processed_ptr, currwins, ws_array, w_vec_ptr, &frame_number);
 				//detect(processed_ptr, ((currwins*samp_overlap) / averaging), ws_array, overlap, w_vec_ptr, &frame_number);
 			}
 		}
@@ -838,8 +845,13 @@ void read_samples_plot(char* sampbase){
 
 	int64_t three_gb = std::pow(2.0, 31) + std::pow(2.0, 30);
 	int64_t two_gb = std::pow(2.0, 31);
+
+	//FIXME
+
 	int remain = (((int64_t)stat_size / (4 * WIN_SAMPS)) % 10);
-	std::cout << "Total number of frames: " << (stat_size / (4 * WIN_SAMPS * 10)) << " Windows dropped: " << remain << std::endl;
+	
+	std::cout << "(!!! THIS IS INCORRECT !!!) Total number of frames: " << (stat_size / (4 * WIN_SAMPS)) << " Windows dropped: " << remain << std::endl;
+	
 	//std::cout << "Frames per 3GB: " << int(three_gb / (4 * WIN_SAMPS * 10));
 	//return 0;
 
@@ -892,14 +904,19 @@ void read_samples_plot(char* sampbase){
 	size_t samp_overlap = 8;
 
 	int currfile = stoi(filenum_s);
-	int64_t bytes_to_read = (two_gb / (sizeof(std::complex<short>) * WIN_SAMPS * averaging)) *(WIN_SAMPS * sizeof(std::complex<short>)  * averaging);
+
+	//FIX ME?
+	//int64_t bytes_to_read = (two_gb / (sizeof(std::complex<short>) * WIN_SAMPS * averaging)) *(WIN_SAMPS * sizeof(std::complex<short>)  * averaging);
+	
+	int64_t bytes_to_read = 2 * std::pow(2, 30) + (averaging - 1) * 4 * WIN_SAMPS; //4GB plus 9 frames
+	
 	//	int64_t bytes_to_read = ((two_gb / (4 * WIN_SAMPS * averaging * samp_overlap)) *(WIN_SAMPS * 4 * averaging));
 
 	std::complex<short>* re;//Buffer for read in samples
 	re = (std::complex<short>*) malloc(bytes_to_read);
 	int currwins = 0;
 
-	double ts_array[MIN5] = { 0 }; //intialise array ton 0, BEWARE!!!! index 0 is actaully Timescale 1. (for the purposes of plotting n.n)
+	double ts_array[MIN5*10] = { 0 }; //intialise array ton 0, BEWARE!!!! index 0 is actaully Timescale 1. (for the purposes of plotting n.n)
 	double total_ws = 0;
 	int plot_id = 0;
 	const int SCALE = 5;
@@ -930,18 +947,27 @@ void read_samples_plot(char* sampbase){
 
 				std::cout << in_samples.gcount() << " additional Bytes read. " << in_samples.gcount() + bytesread << " total Bytes read.";
 				bytesread += in_samples.gcount();
+
+				if (bytesleft >= WIN_SAMPS*(averaging - 1)*sizeof(std::complex<short>)) in_samples.seekg(bytesleft - WIN_SAMPS*(averaging - 1)*sizeof(std::complex<short>));
+				else if (bytesleft - WIN_SAMPS*(averaging - 1)*sizeof(std::complex<short>) < 0) { //edge case if average buffer spans 2 files
+					in_samples.close();
+					std::cout << "reopening previous file as required by average buffer" << std::endl;
+					sampfile = base.substr(0, base.find_last_of("_") + 1) + boost::lexical_cast<std::string>(--currfile) + ".dat";
+					in_samples.open(sampfile, std::ifstream::binary);
+					in_samples.seekg(-1 + bytesleft - WIN_SAMPS*(averaging - 1)*sizeof(std::complex<short>), std::ifstream::end);
+				}
 			}
 		}
 
-		currwins = (bytesread / (4 * WIN_SAMPS * averaging)) * averaging;
+		currwins = (bytesread / (sizeof(std::complex<short>)  * WIN_SAMPS)) - (averaging - 1);
 		std::cout << "Windows: " << currwins << std::endl;
 
 		if (bytesread) {
 			std::cout << "\nFile part " << currfile << " of " << filenum_i << " Loaded" << std::endl;
 
-			processed_ptr_base = (float*)realloc(processed_ptr_base, sizeof(float) * WIN_SAMPS * currwins / averaging);
+			processed_ptr_base = (float*)realloc(processed_ptr_base, sizeof(float) * WIN_SAMPS * currwins);
 			processed_ptr = processed_ptr_base;
-			dothething(re, processed_ptr, averaging, currwins);
+			perform_fft(re, processed_ptr, WIN_SAMPS, averaging, currwins);
 			//processed_ptr = dothething_overlap(re, averaging, processed_ptr, currwins, samp_overlap);
 
 			//Perform the detection! :D
@@ -954,14 +980,14 @@ void read_samples_plot(char* sampbase){
 				frame_number++;
 
 				//detect(processed_ptr, (currwins / averaging) - 1, ws_array, overlap, w_vec_ptr, &frame_number);
-				detect_ts_rec(processed_ptr, ts_array, (currwins / averaging) - 1, ws_array, w_vec_ptr, &frame_number);
+				detect_ts_rec(processed_ptr, ts_array, currwins - 1, ws_array, w_vec_ptr, &frame_number);
 				//detect(processed_ptr, ((currwins*samp_overlap) / averaging) - 1, ws_array, overlap, w_vec_ptr, &frame_number);
 			}
 			else {
 				frame_number++;
-				if (frame_number + currwins / averaging >= MIN5) { //SO HACKY
+				if (frame_number + currwins >= MIN5*averaging) { //SO HACKY
 
-					frames_remain = MIN5 - frame_number;
+					frames_remain = MIN5*averaging - frame_number;
 
 					//last of the frames for this 5 minute segment
 					detect_ts_rec(processed_ptr, ts_array, frames_remain, ws_array, w_vec_ptr, &frame_number);
@@ -973,7 +999,7 @@ void read_samples_plot(char* sampbase){
 					processed_ptr += WIN_SAMPS * frames_remain;
 
 					//need scale, ID, total and double array
-					for (int i = 0; i < MIN5; i++) {
+					for (int i = 0; i < MIN5*averaging; i++) {
 						total_ws += ts_array[i];
 					}
 
@@ -1009,16 +1035,16 @@ void read_samples_plot(char* sampbase){
 					frame_number = 1;
 
 					//clear previous ts_array
-					for (int i = 0; i < MIN5; i++) {
+					for (int i = 0; i < MIN5*10; i++) {
 						ts_array[i] = 0;
 					}
 
 					//record the remainder of the windows
-					detect_ts_rec(processed_ptr, ts_array, ((currwins / averaging) - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number); //IT IS NOT CURRWINS/AVERAGING
+					detect_ts_rec(processed_ptr, ts_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number); //IT IS NOT CURRWINS/AVERAGING
 				}
 				else {
 					//detect(processed_ptr, (currwins / averaging), ws_array, overlap, w_vec_ptr, &frame_number);
-					detect_ts_rec(processed_ptr, ts_array, (currwins / averaging), ws_array, w_vec_ptr, &frame_number);
+					detect_ts_rec(processed_ptr, ts_array, currwins, ws_array, w_vec_ptr, &frame_number);
 					//detect(processed_ptr, ((currwins*samp_overlap) / averaging), ws_array, overlap, w_vec_ptr, &frame_number);
 				}
 			}

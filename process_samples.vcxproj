@@ -50,9 +50,7 @@
     <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.props" />
-  </ImportGroup>
+  <ImportGroup Label="ExtensionSettings" />
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -129,7 +127,7 @@
       <FunctionLevelLinking>
       </FunctionLevelLinking>
       <IntrinsicFunctions>false</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>C:\Users\42127149\AppData\Local\Continuum\Anaconda3\pkgs\numpy-1.10.4-py35_0\Lib\site-packages\numpy\core\include\;C:\Users\42127149\AppData\Local\Continuum\Anaconda3\include\;C:\local\;C:\local\boost_1_60_0\;C:\local\mathglx64\include\;C:\local\fltk-1.3.2\;..\cuda_module\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\cuda_module\;C:\Users\42127149\AppData\Local\Continuum\Anaconda3\pkgs\numpy-1.10.4-py35_0\Lib\site-packages\numpy\core\include\;C:\Users\42127149\AppData\Local\Continuum\Anaconda3\include\;C:\local\;C:\local\boost_1_60_0\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DebugInformationFormat>None</DebugInformationFormat>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;UHD_IMAGES_DIR=OFF;_SCL_SECURE_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_WIN32_WINNT=0x0501;NOMINMAX;UHD_VERSION=30803;HAVE_CONFIG_H;CMAKE_INTDIR="Release";%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -145,7 +143,7 @@
       </EnableCOMDATFolding>
       <OptimizeReferences>
       </OptimizeReferences>
-      <AdditionalLibraryDirectories>C:\Users\42127149\AppData\Local\Continuum\Anaconda3\pkgs\numpy-1.10.4-py35_0\Lib\site-packages\numpy\core\lib\;C:\Users\42127149\AppData\Local\Continuum\Anaconda3\libs\;C:\local\boost_1_60_0\lib64-msvc-12.0\;C:\local\mathglx64\lib\;C:\local\glut\lib\x64\;C:\local\fftw3\;C:\local\mathgl\;C:\Users\42127149\Documents\Projects\process_samples\x64\Release\;%(AdditionalLibraryDirectories);$(CudaToolkitLibDir)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\lib\x64\;C:\Users\42127149\AppData\Local\Continuum\Anaconda3\pkgs\numpy-1.10.4-py35_0\Lib\site-packages\numpy\core\lib\;C:\Users\42127149\AppData\Local\Continuum\Anaconda3\libs\;C:\local\boost_1_60_0\lib64-msvc-12.0\;C:\local\mathglx64\lib\;C:\local\glut\lib\x64\;C:\local\fftw3\;C:\local\mathgl\;C:\Users\42127149\Documents\Projects\process_samples\x64\Release\;%(AdditionalLibraryDirectories);$(CudaToolkitLibDir)</AdditionalLibraryDirectories>
       <AdditionalDependencies>npymath.lib;cudart.lib;cuda_module.lib;cufft.lib;libfftw3f-3.lib;freeglut.lib;mgl.lib;mgl-glut.lib;mgl-fltk.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <LinkTimeCodeGeneration>
@@ -212,7 +210,5 @@
     <None Include="x64\Debug\libfftw3f-3.dll" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.targets" />
-  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets" />
 </Project>

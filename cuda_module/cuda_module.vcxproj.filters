@@ -21,6 +21,9 @@
     <CudaCompile Include="kernel.cu">
       <Filter>Source Files\Deprecated</Filter>
     </CudaCompile>
+    <CudaCompile Include="perform_fft.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuda_module.h">

@@ -24,7 +24,7 @@ procThread::~procThread(){
 	condition.wakeOne();
 	mutex.unlock();
 
-	wait();
+	//wait();
 }
 
 void procThread::run(){
