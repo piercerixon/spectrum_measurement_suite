@@ -100,7 +100,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(OutDir)\$(ProjectName).exe</OutputFile>
-      <AdditionalLibraryDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\lib\x64\;$(PROC_SAMP_INCLUDES);$(CudaToolkitLibDir);C:\Users\42127149\Documents\Projects\process_samples\x64\Debug\;$(QTDIR)\lib;%(AdditionalLibraryDirectories);$(CudaToolkitLibDir)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>Comdlg32.lib;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\lib\x64\;$(PROC_SAMP_INCLUDES);$(CudaToolkitLibDir);C:\Users\42127149\Documents\Projects\process_samples\x64\Debug\;$(QTDIR)\lib;%(AdditionalLibraryDirectories);$(CudaToolkitLibDir)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>cudart.lib;cuda_module.lib;cufft.lib;process_samples.lib;qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5PrintSupportd.lib;Qt5Widgetsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>

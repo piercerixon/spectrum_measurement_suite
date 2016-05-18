@@ -464,7 +464,10 @@ void call_py_plot(double *inArr, int scale, int id, double total) {
 	if (PyCallable_Check(pFunc)) {
 
 		const int arry_H = 1;
-		npy_intp arry_W[arry_H] = { MIN5*10 }; //The way to read this is: array[array_height][array_width]
+		//npy_intp arry_W[arry_H] = { MIN5*10 }; //The way to read this is: array[array_height][array_width]
+
+		npy_intp arry_W[arry_H] = { WIN_SAMPS/2 - WIN_SAMPS/10}; //The way to read this is: array[array_height][array_width]
+
 		//THIS NEEDS TO BE MODIFIED to adapt to the longest timescale that is detected. 
 		
 		//std::cout << "Cast array\n";
@@ -917,10 +920,13 @@ void read_samples_plot(char* sampbase){
 	int currwins = 0;
 
 	double ts_array[MIN5*10] = { 0 }; //intialise array ton 0, BEWARE!!!! index 0 is actaully Timescale 1. (for the purposes of plotting n.n)
+	double rec_array[(WIN_SAMPS / 2) - (WIN_SAMPS / 10)] = { 0 }; //initialise a clipped recording array at half of the total spanned spectrum (it is impossible to get more than half of the spectrum as bandwidth, due to the power on the centre frequency from the LO)
 	double total_ws = 0;
 	int plot_id = 0;
 	const int SCALE = 5;
 	int frames_remain = 0;
+
+	double bw_ws_count = 0;
 
 	std::ofstream window_dump;
 	std::string csv_filename;
@@ -980,7 +986,10 @@ void read_samples_plot(char* sampbase){
 				frame_number++;
 
 				//detect(processed_ptr, (currwins / averaging) - 1, ws_array, overlap, w_vec_ptr, &frame_number);
-				detect_ts_rec(processed_ptr, ts_array, currwins - 1, ws_array, w_vec_ptr, &frame_number);
+				
+				//detect_ts_rec(processed_ptr, ts_array, currwins - 1, ws_array, w_vec_ptr, &frame_number);
+				detect_bw_rec(processed_ptr, rec_array, currwins - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+				
 				//detect(processed_ptr, ((currwins*samp_overlap) / averaging) - 1, ws_array, overlap, w_vec_ptr, &frame_number);
 			}
 			else {
@@ -990,17 +999,30 @@ void read_samples_plot(char* sampbase){
 					frames_remain = MIN5*averaging - frame_number;
 
 					//last of the frames for this 5 minute segment
-					detect_ts_rec(processed_ptr, ts_array, frames_remain, ws_array, w_vec_ptr, &frame_number);
+					//detect_ts_rec(processed_ptr, ts_array, frames_remain, ws_array, w_vec_ptr, &frame_number);
+					detect_bw_rec(processed_ptr, rec_array, frames_remain, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+
 					//cap it off
 					frame_number++;
-					detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
+					
+					//detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
+					detect_bw_rec_once(zero_frame, rec_array, 1, ws_array, w_vec_ptr, frame_number, &bw_ws_count);
 
 					//increment processed_ptr appropriately
 					processed_ptr += WIN_SAMPS * frames_remain;
 
 					//need scale, ID, total and double array
-					for (int i = 0; i < MIN5*averaging; i++) {
-						total_ws += ts_array[i];
+					
+					
+					if (false) {
+						for (int i = 0; i < MIN5*averaging; i++) {
+							total_ws += ts_array[i];
+						}
+					}
+
+					for (int i = 0; i < ((WIN_SAMPS / 2) - (WIN_SAMPS / 10)); i++){
+						total_ws += (rec_array[i] * (i+1));
+						rec_array[i] *= (i + 1);
 					}
 
 					//call plot
@@ -1008,20 +1030,27 @@ void read_samples_plot(char* sampbase){
 					//std::cout << "\nTotal: " << total_ws << std::endl;
 
 #ifndef _DEBUG
-					call_py_plot(ts_array, SCALE, plot_id, total_ws); //It looks like ts_array is going out of scope when this is being plotted T.T
-#endif
+					//call_py_plot(ts_array, SCALE, plot_id, total_ws); //It looks like ts_array is going out of scope when this is being plotted T.T
 
-					//This is here to provide the final window detection and outputting of the window vector to file.
-					csv_filename = "\.\\5min\\window_dump_" + boost::lexical_cast<std::string>(plot_id)+".csv";
-					window_dump.open(csv_filename);
-					window_dump << "timescale,frequency,bandwidth,whitespace,frame_no\n";
-					std::cout << "Outputting Whitespace Windows" << std::endl;
-					for (WINit = window_vec.begin(); WINit < window_vec.end(); WINit++) {
-						window_dump << WINit->timescale << "," << WINit->frequency << "," << WINit->bandwidth << "," << WINit->whitespace << "," << WINit->frame_no << "\n";
+					call_py_plot(rec_array, SCALE, plot_id, total_ws); //It looks like ts_array is going out of scope when this is being plotted T.T
+#endif
+	
+					if (false) {
+						//This is here to provide the final window detection and outputting of the window vector to file.
+						csv_filename = "\.\\5min\\window_dump_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+						window_dump.open(csv_filename);
+						window_dump << "timescale,frequency,bandwidth,whitespace,frame_no\n";
+						std::cout << "Outputting Whitespace Windows" << std::endl;
+						for (WINit = window_vec.begin(); WINit < window_vec.end(); WINit++) {
+							window_dump << WINit->timescale << "," << WINit->frequency << "," << WINit->bandwidth << "," << WINit->whitespace << "," << WINit->frame_no << "\n";
+						}
+						std::cout << "window dump csv " << plot_id << " saved" << std::endl;
+						window_dump.flush();
+						window_dump.close();
 					}
-					std::cout << "window dump csv " << plot_id <<  " saved" << std::endl;
-					window_dump.flush();
-					window_dump.close();
+					else std::cout << "Skipping window output" << std::endl;
+					std::cout << "Total Whitespace: " << bw_ws_count << std::endl;
+					bw_ws_count = 0;
 					window_vec.clear(); //remove previous recorded set of windows
 
 					//reset for next block
@@ -1039,12 +1068,18 @@ void read_samples_plot(char* sampbase){
 						ts_array[i] = 0;
 					}
 
+					for (int i = 0; i < ((WIN_SAMPS / 2) - (WIN_SAMPS / 10)); i++){
+						rec_array[i] = 0;
+					}
+
 					//record the remainder of the windows
-					detect_ts_rec(processed_ptr, ts_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number); //IT IS NOT CURRWINS/AVERAGING
+					//detect_ts_rec(processed_ptr, ts_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number); //IT IS NOT CURRWINS/AVERAGING
+					detect_bw_rec(processed_ptr, rec_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
 				}
 				else {
 					//detect(processed_ptr, (currwins / averaging), ws_array, overlap, w_vec_ptr, &frame_number);
-					detect_ts_rec(processed_ptr, ts_array, currwins, ws_array, w_vec_ptr, &frame_number);
+					//detect_ts_rec(processed_ptr, ts_array, currwins, ws_array, w_vec_ptr, &frame_number);
+					detect_bw_rec(processed_ptr, rec_array, currwins, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
 					//detect(processed_ptr, ((currwins*samp_overlap) / averaging), ws_array, overlap, w_vec_ptr, &frame_number);
 				}
 			}
@@ -1055,31 +1090,43 @@ void read_samples_plot(char* sampbase){
 	//Close the samples off
 	frame_number++;
 	//detect_once(ws_frame, 1, ws_array, overlap, w_vec_ptr, frame_number);
-	detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
+	//detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
+	detect_bw_rec_once(zero_frame, rec_array, 1, ws_array, w_vec_ptr, frame_number, &bw_ws_count);
 
-	for (int i = 0; i < MIN5; i++) {
-		total_ws += ts_array[i];
+	if (false) {
+		for (int i = 0; i < MIN5; i++) {
+			total_ws += ts_array[i];
+		}
+	}
+
+	for (int i = 0; i < ((WIN_SAMPS / 2) - (WIN_SAMPS / 10)); i++){
+		total_ws += (rec_array[i] * (i + 1));
+		rec_array[i] *= (i + 1);
 	}
 
 	//call final plot
 #ifndef _DEBUG
-	call_py_plot(ts_array, SCALE, plot_id, total_ws);
+	call_py_plot(rec_array, SCALE, plot_id, total_ws);
 #endif
+	
+	if (false) {
 
-	//This is here to provide the final window detection and outputting of the window vector to file.
-	csv_filename = "\.\\5min\\window_dump_" + boost::lexical_cast<std::string>(plot_id)+".csv";
-	window_dump.open(csv_filename);
-	window_dump << "timescale,frequency,bandwidth,whitespace,frame_no\n";
-	std::cout << "Outputting final whitespace windows" << std::endl;
-	for (WINit = window_vec.begin(); WINit < window_vec.end(); WINit++) {
-		window_dump << WINit->timescale << "," << WINit->frequency << "," << WINit->bandwidth << "," << WINit->whitespace << "," << WINit->frame_no << "\n";
+		//This is here to provide the final window detection and outputting of the window vector to file.
+		csv_filename = "\.\\5min\\window_dump_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+		window_dump.open(csv_filename);
+		window_dump << "timescale,frequency,bandwidth,whitespace,frame_no\n";
+		std::cout << "Outputting final whitespace windows" << std::endl;
+		for (WINit = window_vec.begin(); WINit < window_vec.end(); WINit++) {
+			window_dump << WINit->timescale << "," << WINit->frequency << "," << WINit->bandwidth << "," << WINit->whitespace << "," << WINit->frame_no << "\n";
+		}
+		std::cout << "window dump csv " << plot_id << " saved" << std::endl;
+		std::cout << "Output Complete" << std::endl;
+		window_dump.flush();
+		window_dump.close();
 	}
-	std::cout << "window dump csv " << plot_id << " saved" << std::endl;
-	std::cout << "Output Complete" << std::endl;
-	window_dump.flush();
-	window_dump.close();
-
-
+	else std::cout << "Skipping final window output" << std::endl;
+	std::cout << "Total Whitespace: " << bw_ws_count << std::endl;
+	bw_ws_count = 0;
 	//TODO: Cleanup
 	if (in_samples.is_open()){
 		in_samples.close();

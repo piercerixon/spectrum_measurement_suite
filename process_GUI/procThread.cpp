@@ -98,7 +98,7 @@ void procThread::run(){
 
 	const int64_t FRAME_SIZE = WIN_SAMPS*sizeof(std::complex<short>)*averaging; //size of a frame in bytes
 
-	qDebug() << bytes_to_read / FRAME_SIZE; //409.6 T.T
+	qDebug() << bytes_to_read / FRAME_SIZE; //409.6, when WIN_SAMPS set to 131072 T.T
 
 	mutex.lock();
 	int filenum_max = this->filenum_max;
@@ -214,10 +214,14 @@ void procThread::run(){
 		} //if the frames dont have to be recalculated, this statement will not be executed.
 
 		//emit some things after junk done
+		
+		//processed_ptr += ((reqFrame - t_rng_min)*WIN_SAMPS);
+		processed_ptr = &processed_ptr_base[0];
+		prepareFall(processed_ptr, WIN_SAMPS);
+
 		processed_ptr = &processed_ptr_base[(reqFrame - t_rng_min)*WIN_SAMPS];
 		qDebug() << "processed_ptr idx: " << (reqFrame - t_rng_min) << "* WIN_SAMPS";
-		//processed_ptr += ((reqFrame - t_rng_min)*WIN_SAMPS);
-		preparePlot(processed_ptr, WIN_SAMPS);
+		//preparePlot(processed_ptr, WIN_SAMPS);
 
 		//Need to do cheeky cuda things here, the biggest blocking call is reading the samples in
 
@@ -264,6 +268,27 @@ void procThread::run(){
 	qDebug() << "Processing thread reached the end D:";
 }
 
+void procThread::prepareFall(float* wsArray, int depth) {
+	//a single fft frame is equal to depth and wsArray is a pointer to the processed data. 
+	int dim = 384;
+	int vecDim = dim*dim; //build a 640 square of pixels for the waterfall, ensure these dims are the same in gui.cpp yea magic numbers!
+	QVector <double> wfSlice(vecDim, 0);
+	
+	int loc = 1300; //magic number that relates directly to the PSD plot
+	int64_t index = (loc/std::pow(2.0,11)) * WIN_SAMPS;
+
+	// could calculate this based on depth, but ehhhhh
+	int freq = 131072 / WIN_SAMPS;
+	int64_t offset = 0;
+	for (int i = 0; i < dim; i++) {
+		for (int j = 0; j < dim; j++) {
+			wfSlice[j + dim*i] = wsArray[index + i*depth + int(std::floor(j/freq)) + offset];
+		} offset += (131072 - WIN_SAMPS);
+	}
+
+	emit fallSignal(wfSlice, depth);
+}
+
 void procThread::preparePlot(float* powerArray, int size){
 
 	//plotLength set to 2048, so only a max of 2048 datapoints are displayed.
@@ -278,21 +303,26 @@ void procThread::preparePlot(float* powerArray, int size){
 
 	double temp = 0;
 	double max = -1000;
-	QVector <double> plotAvg(size,0), plotMax(size,0);
+	double min = 0;
+	QVector <double> plotAvg(size, 0), plotMax(size, 0), plotMin(size, 0);
 	for (int i = 0; i < plotLength; i++){
 		for (int j = 0; j < step; j++) {
 
 			temp += powerArray[i*step + j];
 			if (powerArray[i*step + j] > max) max = powerArray[i*step + j];
+			if (powerArray[i*step + j] < min) min = powerArray[i*step + j];
+
 		}
 		temp /= step;
 		plotAvg[i] = temp;
 		plotMax[i] = max;
+		plotMin[i] = min;
 		temp = 0;
 		max = -1000;
+		min = 0;
 	}
 
-	emit plotSignal(plotAvg, plotMax);
+	emit plotSignal(plotAvg, plotMax, plotMin);
 
 	qDebug() << "emit plotSignal";
 }

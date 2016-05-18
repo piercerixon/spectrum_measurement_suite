@@ -63,7 +63,6 @@ void detect(float* ws_frame, const int num_wins, int* ws_array, int *overlap, st
 				//Iterate through every detected zero, for each unique TS to find all windows
 				for (int j = 0; j < zero_val_idx.size(); j++){
 
-
 					//Note: this make sense for an ascending ordered set
 					for (itr = win_vals_set.begin(); itr != win_vals_set.end() && ws_array[zero_val_idx[j]] >= *itr; itr++) {
 
@@ -88,6 +87,7 @@ void detect(float* ws_frame, const int num_wins, int* ws_array, int *overlap, st
 								unique = false;
 								break;
 								// if the new timescale is longer than previous windows, merge the contributions of those windows into the larger timescale window, then erase them, as they are (effectively) identical
+								// note this is only possible if the BWs are identical!
 							}
 							else if (*itr > win_itr->timescale && bw_count == win_itr->bandwidth && lwb_idx == win_itr->frequency) {
 								contribution += win_itr->whitespace;

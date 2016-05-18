@@ -48,6 +48,9 @@
     <ClCompile Include="test.cpp">
       <Filter>Source Files\Deprecated</Filter>
     </ClCompile>
+    <ClCompile Include="detect_bw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="process.h">

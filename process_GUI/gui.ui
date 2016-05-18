@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1383</width>
-    <height>811</height>
+    <height>804</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,10 +17,10 @@
    <widget class="QCustomPlot" name="plot_0" native="true">
     <property name="geometry">
      <rect>
-      <x>180</x>
-      <y>40</y>
-      <width>1151</width>
-      <height>691</height>
+      <x>20</x>
+      <y>140</y>
+      <width>471</width>
+      <height>371</height>
      </rect>
     </property>
    </widget>
@@ -64,6 +64,16 @@ p, li { white-space: pre-wrap; }
     </property>
     <property name="text">
      <string>Scan</string>
+    </property>
+   </widget>
+   <widget class="QCustomPlot" name="plot_1" native="true">
+    <property name="geometry">
+     <rect>
+      <x>570</x>
+      <y>30</y>
+      <width>751</width>
+      <height>641</height>
+     </rect>
     </property>
    </widget>
   </widget>

@@ -10,8 +10,9 @@
 //#include "process.h"
 
 const int MIN5 = 5722;
-const int WIN_SAMPS = 131072;
-
+//const int WIN_SAMPS = 131072;
+const int WIN_SAMPS = 16384;
+//const int WIN_SAMPS = 2048;
 #ifndef TWO_FOUR_GB
 #define TWO_FOUR_GB
 const int64_t TWO_GB = std::pow(2.0, 31);
@@ -30,12 +31,14 @@ public:
 	void requestUpdate(int);
 
 signals:
-	void plotSignal(QVector<double>, QVector<double>);
+	void plotSignal(QVector<double>, QVector<double>, QVector<double>);
+	void fallSignal(QVector<double> , int);
 
 private:
 	void run();
 	//Takes an array of floats and the size of the array
 	void preparePlot(float*, int);
+	void prepareFall(float*, int);
 	void setup();
 	void procData(float*, int);
 	void selectFile(char*);

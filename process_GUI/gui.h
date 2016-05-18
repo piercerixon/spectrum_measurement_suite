@@ -14,8 +14,9 @@ public:
 	~gui();
 
 private slots:
-	void plotSlot(QVector<double>, QVector<double>);
+	void plotSlot(QVector<double>, QVector<double>, QVector<double>);
 	void scanSlot();
+	void fallSlot(QVector<double>, int);
 
 private:
 	void initUi();
@@ -23,6 +24,10 @@ private:
 	procThread thread;
 	QCPDataMap* plotMapAvg = new QCPDataMap;
 	QCPDataMap* plotMapMax = new QCPDataMap;
+	QCPDataMap* plotMapMin = new QCPDataMap;
+
+	QCPColorScale *colorScale;
+	QCPColorMap *colorMap;
 };
 
 #endif // GUI_H

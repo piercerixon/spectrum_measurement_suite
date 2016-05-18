@@ -178,7 +178,7 @@ static __global__ void avg_out(float* out, cuComplex* d_fft, const int num_wins,
 	cuComplex* d_fft_ptr = &d_fft[0];
 	const float threshold = -113;
 
-	bool THRESHOLD = false;
+	bool THRESHOLD = true;
 
 	for (int j = 0; j < num_wins/averaging; j++){
 

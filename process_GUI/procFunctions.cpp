@@ -8,23 +8,29 @@
 
 void procThread::selectFile(char* file) {
 
-	sleep(1);
-
+	*file = NULL; //This is super important to ensure the openfilenameA succeeds https://support.microsoft.com/en-us/kb/222003
 	OPENFILENAMEA openfile = { 0 };  //http://www.cplusplus.com/forum/windows/82432/ Thanks Disch!
 
 	openfile.lStructSize = sizeof(openfile);
 	openfile.lpstrFilter = "data file\0*.dat\0config file\0*.cfg\0";
 	openfile.nFilterIndex = 1; //because all indexes start at 1 :D
 	openfile.Flags = OFN_FILEMUSTEXIST;  //only allow the user to open files that actually exist
-
 	// the most important bits:
 	openfile.lpstrFile = file;
 	openfile.nMaxFile = MAX_PATH;  // size of our 'buffer' buffer
 
 	std::cout << "\nSelect .dat sample file, ensure valid .cfg file is in the same directory" << std::endl;
 	//Call the open file dialog
-	if (!GetOpenFileNameA(&openfile))
+	bool success = false;
+	int count = 0;
+	while(!success && count < 2) {
+		qDebug() << "Attempt " << count++;
+		success = GetOpenFileNameA(&openfile);
+		sleep(1);
+	};
+	if (!success)
 	{
+
 		//No file selected
 		std::cout << "No file selected!\n\n" << "Terminating";
 		qDebug() << "No file selected! Destroying";
@@ -40,9 +46,12 @@ void procThread::selectFile(char* file) {
 
 void procThread::setup() {
 
-	mutex.lock();
+	while (!mutex.tryLock()) {
+		qDebug() << "We dont have the Mutex";
+		sleep(1);
+	}
+	qDebug() << "Now we have it!";
 	selectFile(selection);
-	
 	if (selection == NULL) {
 		qDebug() << "No file has been selected, this thread will now terminate";
 		this->~procThread();

@@ -28,6 +28,10 @@ void detect_ts_once(unsigned char*, const int, int*, std::vector<window>*, int);
 void detect_ts_rec(float*, double*, const int, int*, std::vector<window>*, int*);
 void detect_ts_rec_once(unsigned char*, double*, const int, int*, std::vector<window>*, int);
 
+void detect_bw_rec(float*, double*, const int, int*, std::vector<window>*, int*, double*);
+void detect_bw_rec_once(unsigned char*, double*, const int, int*, std::vector<window>*, int, double*);
+
+
 void bar_plot(std::vector<window>*);
 void read_samples(char*);
 void read_samples_plot(char*);

@@ -178,6 +178,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="detect.cpp" />
+    <ClCompile Include="detect_bw.cpp" />
     <ClCompile Include="detect_dev.cpp" />
     <ClCompile Include="detect_ts.cpp" />
     <ClCompile Include="plotting_tools.cpp">

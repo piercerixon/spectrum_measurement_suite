@@ -34,6 +34,7 @@ public:
     QCustomPlot *plot_0;
     QTextEdit *textEdit;
     QPushButton *pushButton;
+    QCustomPlot *plot_1;
     QMenuBar *menuBar;
     QMenu *menuOptions;
     QToolBar *mainToolBar;
@@ -43,14 +44,14 @@ public:
     {
         if (guiClass->objectName().isEmpty())
             guiClass->setObjectName(QStringLiteral("guiClass"));
-        guiClass->resize(1383, 811);
+        guiClass->resize(1383, 804);
         actionExit = new QAction(guiClass);
         actionExit->setObjectName(QStringLiteral("actionExit"));
         centralWidget = new QWidget(guiClass);
         centralWidget->setObjectName(QStringLiteral("centralWidget"));
         plot_0 = new QCustomPlot(centralWidget);
         plot_0->setObjectName(QStringLiteral("plot_0"));
-        plot_0->setGeometry(QRect(180, 40, 1151, 691));
+        plot_0->setGeometry(QRect(20, 140, 471, 371));
         textEdit = new QTextEdit(centralWidget);
         textEdit->setObjectName(QStringLiteral("textEdit"));
         textEdit->setGeometry(QRect(20, 60, 101, 31));
@@ -61,6 +62,9 @@ public:
         pushButton = new QPushButton(centralWidget);
         pushButton->setObjectName(QStringLiteral("pushButton"));
         pushButton->setGeometry(QRect(30, 100, 75, 23));
+        plot_1 = new QCustomPlot(centralWidget);
+        plot_1->setObjectName(QStringLiteral("plot_1"));
+        plot_1->setGeometry(QRect(570, 30, 751, 641));
         guiClass->setCentralWidget(centralWidget);
         menuBar = new QMenuBar(guiClass);
         menuBar->setObjectName(QStringLiteral("menuBar"));

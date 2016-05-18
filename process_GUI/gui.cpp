@@ -21,8 +21,10 @@ gui::~gui()
 void gui::initUi() {
 
 	QCustomPlot* fft_plot = ui.plot_0;
+	QCustomPlot* waterfall = ui.plot_1;
 
 	fft_plot->setFocusPolicy(Qt::ClickFocus);
+	waterfall->setFocusPolicy(Qt::ClickFocus);
 
 	fft_plot->addGraph();
 	fft_plot->graph(0);
@@ -36,6 +38,12 @@ void gui::initUi() {
 	//fft_plot->graph(1)->setBrush(QBrush(QColor(240, 255, 200)));
 	fft_plot->graph(1)->setAntialiasedFill(false);
 
+	fft_plot->addGraph();
+	fft_plot->graph(2);
+	fft_plot->graph(2)->setPen(QPen(Qt::green));
+	//fft_plot->graph(1)->setBrush(QBrush(QColor(240, 255, 200)));
+	fft_plot->graph(2)->setAntialiasedFill(false);
+
 	//fft_plot->yAxis->setScaleType(fft_plot->yAxis->stLogarithmic);
 	//fft_plot->yAxis->setScaleLogBase(10);
 	fft_plot->yAxis->setRange(-140, 0);
@@ -48,27 +56,86 @@ void gui::initUi() {
 	keyPressFilter* filter = new keyPressFilter(ui.pushButton);
 	ui.textEdit->installEventFilter(filter);
 
+	//Waterfall code
+		waterfall->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom); // this will also allow rescaling the color scale by dragging/zooming
+		waterfall->axisRect()->setupFullAxesBox(true);
+		waterfall->xAxis->setLabel("x");
+		waterfall->yAxis->setLabel("y");
+
+		// set up the QCPColorMap:
+		colorMap = new QCPColorMap(waterfall->xAxis, waterfall->yAxis);
+		waterfall->addPlottable(colorMap);
+		int dim = 384;
+		colorMap->data()->setSize(dim, dim); // we want the color map to have nx * ny data points
+		colorMap->data()->setRange(QCPRange(0, dim), QCPRange(0, dim)); // and span the coordinate range -4..4 in both key (x) and value (y) dimensions
+	
+		/*
+		double x, y, z;
+		for (int xIndex = 0; xIndex<nx; ++xIndex)
+		{
+			for (int yIndex = 0; yIndex<ny; ++yIndex)
+			{
+				colorMap->data()->cellToCoord(xIndex, yIndex, &x, &y);
+				double r = 3 * qSqrt(x*x + y*y) + 1e-2;
+				z = 2 * x*(qCos(r + 2) / r - qSin(r + 2) / r); // the B field strength of dipole radiation (modulo physical constants)
+				colorMap->data()->setCell(xIndex, yIndex, z);
+			}
+		}
+		*/
+		// add a color scale:
+		colorScale = new QCPColorScale(waterfall);
+		waterfall->plotLayout()->addElement(0, 1, colorScale); // add it to the right of the main axis rect
+		colorScale->setDataRange(QCPRange(-1, 2));
+		colorScale->setType(QCPAxis::atRight); // scale shall be vertical bar with tick/axis labels right (actually atRight is already the default)
+		colorMap->setColorScale(colorScale); // associate the color map with the color scale
+		//colorScale->axis()->setLabel("Waterfall Plot");
+		waterfall->plotLayout()->insertRow(0); // inserts an empty row above the default axis rect
+		waterfall->plotLayout()->addElement(0, 0, new QCPPlotTitle(waterfall, "Waterfall Plot"));
+		colorMap->setGradient(QCPColorGradient::gpPolar);
+
 
 	//Connect worker thread to gui plotting function
 	fft_plot->graph(0)->setData(plotMapAvg, false);
 	fft_plot->graph(1)->setData(plotMapMax, false);
+	fft_plot->graph(2)->setData(plotMapMin, false);
 
 	qRegisterMetaType<QVector <double> >("QVector <double>");
-	connect(&thread, SIGNAL(plotSignal(QVector<double>, QVector<double>)), this, SLOT(plotSlot(QVector<double>, QVector<double>)));
+	connect(&thread, SIGNAL(plotSignal(QVector<double>, QVector<double>, QVector<double>)), this, SLOT(plotSlot(QVector<double>, QVector<double>, QVector<double>)));
+	connect(&thread, SIGNAL(fallSignal(QVector<double>, int)), this, SLOT(fallSlot(QVector<double>, int)));
 	connect(ui.pushButton, SIGNAL(clicked()), this, SLOT(scanSlot()));
 }
 
-void gui::plotSlot(QVector<double> yAvg, QVector<double> yMax){
+void gui::plotSlot(QVector<double> yAvg, QVector<double> yMax, QVector<double> yMin){
 	qDebug() << "signal received";
 	QCustomPlot* fft_plot = ui.plot_0;
 
 	for (int i = 0; i < yAvg.length(); i++) {
 		plotMapAvg->insert((double)i, QCPData((double)(i + 1), yAvg[i]));
 		plotMapMax->insert((double)i, QCPData((double)(i + 1), yMax[i]));
+		plotMapMin->insert((double)i, QCPData((double)(i + 1), yMin[i]));
 	}
 
 	fft_plot->replot();
 	qDebug() << "Plot updated!";
+}
+
+void gui::fallSlot(QVector<double> vals, int depth) {
+	int dim = 384;
+
+	QCustomPlot* waterfall = ui.plot_1;
+
+	for (int yIndex = 0; yIndex < dim; ++yIndex)
+	{
+		for (int xIndex = 0; xIndex < dim; ++xIndex)
+		{
+			colorMap->data()->setCell(xIndex, yIndex, vals[xIndex+yIndex*dim]);
+		}
+	}
+
+	//colorMap->rescaleDataRange();
+
+	waterfall->rescaleAxes();
+	waterfall->replot();
 }
 
 void gui::scanSlot() {

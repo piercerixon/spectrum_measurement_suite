@@ -17,7 +17,10 @@ static __global__ void cufft_prep_overlap(cuComplex*, cuComplexShort*, float*, c
 
 static __device__ __host__ cuComplex ComplexRMul(cuComplex, float);
 
-const int NUM_SAMPS = 131072;
+//const int NUM_SAMPS = 131072;
+const int NUM_SAMPS = 16384;
+//const int NUM_SAMPS = 2048;
+
 const int CU_THD = 1024;
 
 #ifndef PI
