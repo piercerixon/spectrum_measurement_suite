@@ -176,9 +176,11 @@ static __global__ void avg_out(float* out, cuComplex* d_fft, const int num_wins,
 	int idx = threadIdx.x;
 	float* out_ptr = &out[0];
 	cuComplex* d_fft_ptr = &d_fft[0];
-	const float threshold = -113;
+	const float threshold = -115;
+	const int filter_level = 16;
 
 	bool THRESHOLD = true;
+	bool FIVEBY = true;
 
 	for (int j = 0; j < num_wins/averaging; j++){
 
@@ -202,6 +204,87 @@ static __global__ void avg_out(float* out, cuComplex* d_fft, const int num_wins,
 
 		out_ptr += NUM_SAMPS; //increment out_ptr by one frame of averages
 		d_fft_ptr += NUM_SAMPS*averaging; //increment d_fft_ptr by number of frames averaged
+	}
+
+
+	if (THRESHOLD && !FIVEBY){
+		int resolution = NUM_SAMPS;
+		//Zero out pointer
+		out_ptr = &out[0 + resolution]; //we dont want to filter the first row - at this stage anyway
+		int absthreadidx = blockIdx.x * blockDim.x + threadIdx.x; //I wanted to be more explicit before, shortcutting here
+
+		//j starts at 1 and ends at num_wins-1 to give the sufficient spacing for the 3x3 kernel
+		for (int j = 1; j < num_wins - 1; j++){
+
+			if (j == 0) { //first row
+			}
+			else if (j == num_wins - 1) { //last row
+
+			}
+
+			if (absthreadidx == 0) { //left edge
+			}
+			else if (absthreadidx == resolution - 1) { //right edge
+			}
+
+			else { //everything else
+				//If the centre of a kernel = 1, take a 3 by 3 kernel, and sum the edge cells, if greater than filter_level, can assume this is noise
+				if (out_ptr[absthreadidx] == 0)
+				{
+					//Currently set to detect a lone cell. Can increase this for more agressive filtering. Though the kernel size may have to increase also
+					if ((out_ptr[absthreadidx - resolution - 1] + out_ptr[absthreadidx - resolution] + out_ptr[absthreadidx - resolution + 1] +
+						out_ptr[absthreadidx - 1] + out_ptr[absthreadidx + 1] +
+						out_ptr[absthreadidx + resolution - 1] + out_ptr[absthreadidx + resolution] + out_ptr[absthreadidx + resolution + 1]) > filter_level)
+					{
+						out_ptr[absthreadidx] = 1;
+					}
+				}
+			}
+
+			out_ptr += resolution; //next row of output array (as the 2d output is really just a very long 1d array)
+		}
+	}
+
+	else if (THRESHOLD && FIVEBY){
+		int resolution = NUM_SAMPS;
+		//Zero out pointer
+		out_ptr = &out[0 + 2*resolution]; //we dont want to filter the first row - at this stage anyway
+		int absthreadidx = blockIdx.x * blockDim.x + threadIdx.x; //I wanted to be more explicit before, shortcutting here
+
+		//j starts at 1 and ends at num_wins-1 to give the sufficient spacing for the 3x3 kernel
+		for (int j = 2; j < num_wins - 2; j++){
+
+			if (j == 0 || j == 1) { //first row
+			}
+			else if (j == num_wins - 2 || j == num_wins -1) { //last row
+
+			}
+
+			if (absthreadidx == 0 || absthreadidx == 1) { //left edge
+			}
+			else if (absthreadidx == resolution - 1 || absthreadidx == resolution - 2) { //right edge
+			}
+
+			else { //everything else
+				//If the centre of a kernel = 1, take a 3 by 3 kernel, and sum the edge cells, if greater than filter_level, can assume this is noise
+				if (out_ptr[absthreadidx] == 0)
+				{
+					//Currently set to detect a lone cell. Can increase this for more agressive filtering. Though the kernel size may have to increase also
+					if ((
+						out_ptr[absthreadidx - 2*resolution - 2] + out_ptr[absthreadidx - 2*resolution - 1] + out_ptr[absthreadidx - 2*resolution] + out_ptr[absthreadidx - 2*resolution + 1] + out_ptr[absthreadidx - 2*resolution + 2] +
+						out_ptr[absthreadidx - resolution - 2] + out_ptr[absthreadidx - resolution - 1] + out_ptr[absthreadidx - resolution] + out_ptr[absthreadidx - resolution + 1] + out_ptr[absthreadidx - resolution + 2] +
+						out_ptr[absthreadidx - 2] + out_ptr[absthreadidx - 1] + out_ptr[absthreadidx + 1] + out_ptr[absthreadidx + 2] +
+						out_ptr[absthreadidx + resolution - 2] + out_ptr[absthreadidx + resolution - 1] + out_ptr[absthreadidx + resolution] + out_ptr[absthreadidx + resolution + 1] + out_ptr[absthreadidx + resolution + 2] +
+						out_ptr[absthreadidx + 2 * resolution - 2] + out_ptr[absthreadidx + 2 * resolution - 1] + out_ptr[absthreadidx + 2 * resolution] + out_ptr[absthreadidx + 2 * resolution + 1] + out_ptr[absthreadidx + 2 * resolution + 2]
+						) > filter_level)
+					{
+						out_ptr[absthreadidx] = 1;
+					}
+				}
+			}
+
+			out_ptr += resolution; //next row of output array (as the 2d output is really just a very long 1d array)
+		}
 	}
 }
 

@@ -77,7 +77,8 @@ boost::mutex fft_mutex[NUM_THREADS], recv_mutex, super_mutex;
 boost::condition_variable_any fft_cond, recv_cond, super_cond;
 
 
-const int MIN5 = 5722; //int(300,000/52.4288) ms
+const int MIN5 = 5722; //int(300,000/52.4288) ms (@131072 - no averaging)
+//const int MIN5 = 366208; //@2048 ...
 
 //constructor definition
 window::window(int t, int bw, int f, int ws, int n) {
@@ -185,8 +186,6 @@ int python_test() { //This will be deprecated in due time
 	return 0;
 }
 
-
-
 int main(int argc, char*argv[]) {
 	//Very exciting main
 
@@ -194,11 +193,12 @@ int main(int argc, char*argv[]) {
 	
 	select_file(dataset);
 
-	read_samples_plot(dataset);
+	//read_samples_plot(dataset);
+	read_samples_outwins(dataset);
 	return(0);
 
 	//Program should never get past here (with GPU), preserving for just incasesies ;)
-	//Probably should look into some kind of realtime plotting display for use with GPU ... one day WE HAVE IT! Qt to the rescue do do-do do! 
+	//Probably should look into some kind of realtime plotting display for use with GPU ... one day... WE HAVE IT! Qt to the rescue do do-do do! 
 }
 
 /*
@@ -434,8 +434,6 @@ int main(int argc, char*argv[]) {
 	system("pause");
 	}
 	*/
-
-
 
 void create_folders(){
 
@@ -853,7 +851,7 @@ void read_samples_plot(char* sampbase){
 
 	int remain = (((int64_t)stat_size / (4 * WIN_SAMPS)) % 10);
 	
-	std::cout << "(!!! THIS IS INCORRECT !!!) Total number of frames: " << (stat_size / (4 * WIN_SAMPS)) << " Windows dropped: " << remain << std::endl;
+	std::cout << "Total number of frames: " << (stat_size / (4 * WIN_SAMPS)) << " Windows dropped: " << remain << std::endl;
 	
 	//std::cout << "Frames per 3GB: " << int(three_gb / (4 * WIN_SAMPS * 10));
 	//return 0;
@@ -1140,7 +1138,370 @@ void read_samples_plot(char* sampbase){
 	//bar_plot(&window_vec); //If the end of the data has been reached, then display the data
 }
 
+void read_samples_outwins(char* sampbase){
 
+	//Configuration
+	std::string base = sampbase;
+	std::string path = base.substr(0, base.find_last_of("/\\") + 1);
+	std::string token = base.substr(base.find_last_of("/\\") + 1);
+
+	std::string cfgfile = path + "sample_config.cfg";
+	std::cout << cfgfile << std::endl;
+
+	std::ifstream config(cfgfile, std::ifstream::in);
+	if (config.fail()) {
+		std::cout << "\nPlease ensure that cfg file is in the same directory as the samples!\n\nThis program will now terminate" << std::endl;
+		exit(0);
+	}
+
+	//Read in configuration File and set appropriate program parameters.
+	// IMPORTANT: configuration file must have the name "sample_config.cfg" and be in the same directory as the samples
+	std::string line;
+	std::istringstream sin;
+	int i = 0;
+
+	if (config.is_open()){
+		while (std::getline(config, line)) {
+			sin.clear();
+			sin.str(line);
+			if (i == 0) sin >> filename; //Currently stops at a space - its an istringstream problem 
+			else if (i == 1) sin >> device;
+			else if (i == 2) sin >> centre_freq;
+			else if (i == 3) sin >> bandwidth;
+			else if (i == 4) sin >> samp_rate;
+			else if (i == 5) sin >> rx_gain;
+			else if (i > 5) {
+				std::cout << "Too many arguments in configuration ... terminating" << std::endl;
+				exit(0);
+			}
+			std::cout << line << std::endl;
+			i++;
+		}
+	}
+
+	//Sample Files
+	std::string filenum_s = token.substr(token.find_last_of("_") + 1, (token.find(".dat") - token.find_last_of("_") - 1)); //extract the number of the sample file
+	int filenum_i = stoi(filenum_s);
+
+	struct _stat64 stat;
+	std::string search;
+	int64_t stat_size = 0;
+
+	std::cout << "Only sequential sample files will be included" << std::endl;
+	while (true) {
+		search = base.substr(0, base.find_last_of("_") + 1) + boost::lexical_cast<std::string>(filenum_i)+".dat";
+
+		if (_stat64(search.c_str(), &stat) != -1) {
+			std::cout << "File: " << filenum_i++ << " included" << std::endl;
+			stat_size += stat.st_size;
+			_stat64(search.c_str(), &stat);
+
+		}
+		else {
+			std::cout << std::endl << filenum_i << " sample file(s) discovered\n\n" << "Cumulative filesize: " << stat_size / (1 << 20) << " MB\n\n";
+			break;
+		}
+	}
+	std::cout << token << std::endl;
+	std::cout << path << std::endl;
+	std::cout << filenum_s << std::endl;
+
+	int64_t three_gb = std::pow(2.0, 31) + std::pow(2.0, 30);
+	int64_t two_gb = std::pow(2.0, 31);
+
+	//FIXME
+
+	int remain = (((int64_t)stat_size / (4 * WIN_SAMPS)) % 10);
+
+	std::cout << "Total number of frames: " << (stat_size / (4 * WIN_SAMPS)) << " Windows dropped: " << remain << std::endl;
+
+	//std::cout << "Frames per 3GB: " << int(three_gb / (4 * WIN_SAMPS * 10));
+	//return 0;
+
+	//Timing variables
+	/*
+	LARGE_INTEGER ftpl, wind, perffreq;
+	double wf, pf;
+	QueryPerformanceFrequency(&perffreq);
+	pf = perffreq.QuadPart;
+	QueryPerformanceCounter(&ftpl);
+	*/
+
+	//Samples Setup 
+	std::ifstream in_samples;
+	//std::string sampfile = select_file;
+	std::string sampfile = sampbase;
+	in_samples.open(sampfile, std::ifstream::binary);
+	in_samples.seekg(0, std::ifstream::beg);
+
+	struct _stat64 stat_buff;
+	_stat64(sampfile.c_str(), &stat_buff);
+	double file_size = stat_buff.st_size;
+
+	float* processed_ptr_base = NULL;
+	float* processed_ptr = NULL;
+	int64_t averaging = 10;
+	int64_t num_wins = file_size / (4 * WIN_SAMPS * 2); //Total number of bytes, divided by the size of a complex double (4) times the number of samples for a window (131072), times 2 (to only take half of the sample file)
+	//std::cout << "NUMBER OF FRAMES: " << file_size / (4 * WIN_SAMPS * 2) << std::endl;
+
+	//		if (num_wins % averaging != 0) std::cout << "Last " << num_wins%averaging << " windows will be dropped!" << std::endl;
+
+	int frame_number = 0;
+	bool init = true;
+
+	int ws_array[WIN_SAMPS][2]; //currently 2, as 0 is the actual WS frame, and 1 is the current window that is spanning that opportunity
+	float zero_frame[WIN_SAMPS];
+	int overlap[WIN_SAMPS];
+
+	for (int i = 0; i < WIN_SAMPS; i++){
+		ws_array[i][0] = 0;
+		ws_array[i][1] = 0;
+		zero_frame[i] = 0;
+		overlap[i] = 0;
+	}
+
+	//Window vector for outputting windows
+	std::vector<window> window_vec;
+	std::vector<window>* w_vec_ptr = &window_vec;
+	size_t bytesread = 1;
+	size_t bytesleft = 0;
+	size_t samp_overlap = 8;
+
+	int currfile = stoi(filenum_s);
+
+	//FIX ME?
+	//int64_t bytes_to_read = (two_gb / (sizeof(std::complex<short>) * WIN_SAMPS * averaging)) *(WIN_SAMPS * sizeof(std::complex<short>)  * averaging);
+
+	int64_t bytes_to_read = 2 * std::pow(2, 30) + (averaging - 1) * 4 * WIN_SAMPS; //4GB plus 9 frames
+
+	//	int64_t bytes_to_read = ((two_gb / (4 * WIN_SAMPS * averaging * samp_overlap)) *(WIN_SAMPS * 4 * averaging));
+
+	std::complex<short>* re;//Buffer for read in samples
+	re = (std::complex<short>*) malloc(bytes_to_read);
+	int currwins = 0;
+
+	double ts_array[MIN5 * 10] = { 0 }; //intialise array ton 0, BEWARE!!!! index 0 is actaully Timescale 1. (for the purposes of plotting n.n)
+	double rec_array[(WIN_SAMPS / 2) - (WIN_SAMPS / 10)] = { 0 }; //initialise a clipped recording array at half of the total spanned spectrum (it is impossible to get more than half of the spectrum as bandwidth, due to the power on the centre frequency from the LO)
+	double total_ws = 0;
+	int plot_id = 0;
+	const int SCALE = 5;
+	int frames_remain = 0;
+
+	double bw_ws_count = 0;
+
+	std::ofstream window_dump;
+	std::string csv_filename;
+	std::vector<window>::iterator WINit; //Window iterator
+
+	//std::cout << std::endl <<  std::endl << bytes_to_read << " Read this many samps please\n\n";
+	//This is where all the processing happens
+	//This will generate unique plots for every 5722 frames (MIN5) (set at OLD 10 AVERAGING ... i.e. frame TS = 52.4288ms) ... this number would be significantly higher once that is fixed
+	while (bytesread != 0){
+
+		in_samples.read((char*)re, bytes_to_read);
+		bytesread = in_samples.gcount();
+		std::cout << std::endl << bytesread << " Bytes read. ";
+		bytesleft = bytes_to_read - bytesread;
+
+		if (bytesleft > 0 && currfile < filenum_i) {
+
+			if (in_samples.is_open()) in_samples.close();
+			sampfile = base.substr(0, base.find_last_of("_") + 1) + boost::lexical_cast<std::string>(++currfile) + ".dat";
+			in_samples.open(sampfile, std::ifstream::binary);
+			if (in_samples.is_open()) {
+				in_samples.seekg(0, std::ifstream::beg);
+				in_samples.read((char*)re, bytesleft);
+
+				std::cout << in_samples.gcount() << " additional Bytes read. " << in_samples.gcount() + bytesread << " total Bytes read.";
+				bytesread += in_samples.gcount();
+
+				if (bytesleft >= WIN_SAMPS*(averaging - 1)*sizeof(std::complex<short>)) in_samples.seekg(bytesleft - WIN_SAMPS*(averaging - 1)*sizeof(std::complex<short>));
+				else if (bytesleft - WIN_SAMPS*(averaging - 1)*sizeof(std::complex<short>) < 0) { //edge case if average buffer spans 2 files
+					in_samples.close();
+					std::cout << "reopening previous file as required by average buffer" << std::endl;
+					sampfile = base.substr(0, base.find_last_of("_") + 1) + boost::lexical_cast<std::string>(--currfile) + ".dat";
+					in_samples.open(sampfile, std::ifstream::binary);
+					in_samples.seekg(-1 + bytesleft - WIN_SAMPS*(averaging - 1)*sizeof(std::complex<short>), std::ifstream::end);
+				}
+			}
+		}
+
+		currwins = (bytesread / (sizeof(std::complex<short>)  * WIN_SAMPS)) - (averaging - 1);
+		std::cout << "Windows: " << currwins << std::endl;
+
+		if (bytesread) {
+			std::cout << "\nFile part " << currfile << " of " << filenum_i << " Loaded" << std::endl;
+
+			processed_ptr_base = (float*)realloc(processed_ptr_base, sizeof(float) * WIN_SAMPS * currwins);
+			processed_ptr = processed_ptr_base;
+			perform_fft(re, processed_ptr, WIN_SAMPS, averaging, currwins);
+			//processed_ptr = dothething_overlap(re, averaging, processed_ptr, currwins, samp_overlap);
+
+			//Perform the detection! :D
+			if (init) {
+				for (int i = 0; i < WIN_SAMPS; i++) {
+					ws_array[i][0] = processed_ptr[i]; //This is done because the first entry in ws_array has to be initialised with the first frame
+				}
+				init = false;
+				processed_ptr += WIN_SAMPS;
+				frame_number++;
+
+				//detect(processed_ptr, (currwins / averaging) - 1, ws_array, overlap, w_vec_ptr, &frame_number);
+				//detect_ts_rec(processed_ptr, ts_array, currwins - 1, ws_array, w_vec_ptr, &frame_number);
+				//detect_bw_rec(processed_ptr, rec_array, currwins - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+				detect_greedy(processed_ptr, currwins - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+
+				//detect(processed_ptr, ((currwins*samp_overlap) / averaging) - 1, ws_array, overlap, w_vec_ptr, &frame_number);
+			}
+			else {
+				frame_number++;
+				if (frame_number + currwins >= MIN5*averaging) { //SO HACKY
+
+					frames_remain = MIN5*averaging - frame_number;
+
+					//last of the frames for this 5 minute segment
+					//detect_ts_rec(processed_ptr, ts_array, frames_remain, ws_array, w_vec_ptr, &frame_number);
+					//detect_bw_rec(processed_ptr, rec_array, frames_remain, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+					detect_greedy(processed_ptr, frames_remain, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+
+					//cap it off
+					frame_number++;
+
+					//detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
+					//detect_bw_rec_once(zero_frame, rec_array, 1, ws_array, w_vec_ptr, frame_number, &bw_ws_count);
+					detect_greedy(zero_frame, 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+
+					//increment processed_ptr appropriately
+					processed_ptr += WIN_SAMPS * frames_remain;
+
+					//need scale, ID, total and double array
+
+
+					if (false) {
+						for (int i = 0; i < MIN5*averaging; i++) {
+							total_ws += ts_array[i];
+						}
+
+
+						for (int i = 0; i < ((WIN_SAMPS / 2) - (WIN_SAMPS / 10)); i++){
+							total_ws += (rec_array[i] * (i + 1));
+							rec_array[i] *= (i + 1);
+						}
+					}
+					//call plot?
+					//for (int k = 0; k < MIN5; k++) std::cout << ts_array[k] << " ,";
+					//std::cout << "\nTotal: " << total_ws << std::endl;
+					//call_py_plot(ts_array, SCALE, plot_id, total_ws); //It looks like ts_array is going out of scope when this is being plotted T.T
+
+					if (true) {
+						//This is here to provide the final window detection and outputting of the window vector to file.
+						csv_filename = "\.\\partitioning\\window_dump_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+						window_dump.open(csv_filename);
+						window_dump << "timescale,frequency,bandwidth,whitespace,frame_no\n";
+						std::cout << "Outputting Whitespace Windows" << std::endl;
+						for (WINit = window_vec.begin(); WINit < window_vec.end(); WINit++) {
+							window_dump << WINit->timescale << "," << WINit->frequency << "," << WINit->bandwidth << "," << WINit->whitespace << "," << WINit->frame_no << "\n";
+						}
+						window_dump << "\n\n\n" << "Total Whitespace: " << bw_ws_count << "\n";
+						std::cout << "window dump csv " << plot_id << " saved" << std::endl;
+						window_dump.flush();
+						window_dump.close();
+					}
+					else std::cout << "Skipping window output" << std::endl;
+					std::cout << "Total Whitespace: " << bw_ws_count << std::endl;
+					bw_ws_count = 0;
+					window_vec.clear(); //remove previous recorded set of windows
+
+					//reset for next block
+					for (int i = 0; i < WIN_SAMPS; i++){
+						ws_array[i][0] = processed_ptr[i]; // <- frame number 0 ;)
+					}
+
+					processed_ptr += WIN_SAMPS;
+					total_ws = 0;
+					plot_id++;
+					frame_number = 1;
+
+					//clear previous ts_array
+					for (int i = 0; i < MIN5 * 10; i++) {
+						ts_array[i] = 0;
+					}
+
+					for (int i = 0; i < ((WIN_SAMPS / 2) - (WIN_SAMPS / 10)); i++){
+						rec_array[i] = 0;
+					}
+
+					//record the remainder of the windows
+					//detect_ts_rec(processed_ptr, ts_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number); //IT IS NOT CURRWINS/AVERAGING
+					//detect_bw_rec(processed_ptr, rec_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+					detect_greedy(processed_ptr, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+				}
+				else {
+					//detect(processed_ptr, (currwins / averaging), ws_array, overlap, w_vec_ptr, &frame_number);
+					//detect_ts_rec(processed_ptr, ts_array, currwins, ws_array, w_vec_ptr, &frame_number);
+					//detect_bw_rec(processed_ptr, rec_array, currwins, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+					detect_greedy(processed_ptr, currwins, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+					//detect(processed_ptr, ((currwins*samp_overlap) / averaging), ws_array, overlap, w_vec_ptr, &frame_number);
+				}
+			}
+		}
+	}
+
+	std::cout << "Finishing up" << std::endl;
+	//Close the samples off
+	frame_number++;
+	//detect_once(ws_frame, 1, ws_array, overlap, w_vec_ptr, frame_number);
+	//detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
+	//detect_bw_rec_once(zero_frame, rec_array, 1, ws_array, w_vec_ptr, frame_number, &bw_ws_count);
+	detect_greedy(zero_frame, 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+
+	if (false) {
+		for (int i = 0; i < MIN5; i++) {
+			total_ws += ts_array[i];
+		}
+	}
+
+	for (int i = 0; i < ((WIN_SAMPS / 2) - (WIN_SAMPS / 10)); i++){
+		total_ws += (rec_array[i] * (i + 1));
+		rec_array[i] *= (i + 1);
+	}
+
+	//call final plot
+//#ifndef _DEBUG
+//	call_py_plot(rec_array, SCALE, plot_id, total_ws);
+//#endif
+
+	if (true) {
+
+		//This is here to provide the final window detection and outputting of the window vector to file.
+		csv_filename = "\.\\partitioning\\window_dump_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+		window_dump.open(csv_filename);
+		window_dump << "timescale,frequency,bandwidth,whitespace,frame_no\n";
+		std::cout << "Outputting final whitespace windows" << std::endl;
+		for (WINit = window_vec.begin(); WINit < window_vec.end(); WINit++) {
+			window_dump << WINit->timescale << "," << WINit->frequency << "," << WINit->bandwidth << "," << WINit->whitespace << "," << WINit->frame_no << "\n";
+		}
+		window_dump << "\n\n\n" << "Total Whitespace: " << bw_ws_count << "\n";
+		std::cout << "window dump csv " << plot_id << " saved" << std::endl;
+		std::cout << "Output Complete" << std::endl;
+		window_dump.flush();
+		window_dump.close();
+	}
+	else std::cout << "Skipping final window output" << std::endl;
+	std::cout << "Total Whitespace: " << bw_ws_count << std::endl;
+	bw_ws_count = 0;
+	//TODO: Cleanup
+	if (in_samples.is_open()){
+		in_samples.close();
+	}
+	if (config.is_open()){
+		in_samples.close();
+	}
+	free(re);
+	free(processed_ptr);
+
+	//bar_plot(&window_vec); //If the end of the data has been reached, then display the data
+}
 template<class T>
 void print_vector(std::vector<T> &vect){
 

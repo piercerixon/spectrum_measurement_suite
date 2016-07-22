@@ -31,10 +31,12 @@ void detect_ts_rec_once(unsigned char*, double*, const int, int*, std::vector<wi
 void detect_bw_rec(float*, double*, const int, int*, std::vector<window>*, int*, double*);
 void detect_bw_rec_once(unsigned char*, double*, const int, int*, std::vector<window>*, int, double*);
 
+void detect_greedy(float*, const int, int(*)[2], std::vector<window>*, int*, double*);
 
 void bar_plot(std::vector<window>*);
 void read_samples(char*);
 void read_samples_plot(char*);
+void read_samples_outwins(char*);
 
 void test();
 template<class T> 
@@ -54,7 +56,7 @@ static const float pi = float(std::acos(-1.0));
 //const int WIN_SAMPS = 65536; //temporarly set here to be a definite number
 const int WIN_SAMPS = 131072; //temporarly set here to be a definite number (OMFG THE DAMN THING RAN OUT OF STACK MEMORY LOL)
 //const int WIN_SAMPS = 262144;
-//const int WIN_SAMPS = 128;
+//const int WIN_SAMPS = 2048;
 
 //Program conditions for different modes
 static bool DISPLAY = false;

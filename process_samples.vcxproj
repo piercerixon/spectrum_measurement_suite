@@ -68,7 +68,7 @@
     <OutDir>C:\Samples\Release\</OutDir>
     <IntDir>process_samples.dir\Release\</IntDir>
     <TargetName>process_samples</TargetName>
-    <LinkIncremental>true</LinkIncremental>
+    <LinkIncremental>false</LinkIncremental>
     <EnableManagedIncrementalBuild>false</EnableManagedIncrementalBuild>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -151,6 +151,7 @@
       <StackReserveSize>100000000000</StackReserveSize>
       <LargeAddressAware>true</LargeAddressAware>
       <Profile>false</Profile>
+      <ShowProgress>NotSet</ShowProgress>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -181,6 +182,7 @@
     <ClCompile Include="detect_bw.cpp" />
     <ClCompile Include="detect_dev.cpp" />
     <ClCompile Include="detect_ts.cpp" />
+    <ClCompile Include="detect_weighted.cpp" />
     <ClCompile Include="plotting_tools.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>

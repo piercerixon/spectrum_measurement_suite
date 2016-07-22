@@ -7,6 +7,8 @@
 
 void detect(float* ws_frame, const int num_wins, int* ws_array, int *overlap, std::vector<window>* window_vec, int* frame_num) {
 
+	/*********************This is also known as MaxCover********************/
+
 	//std::cout << "Commence Whitespace Detection" << std::endl;
 		
 	//Process the ws

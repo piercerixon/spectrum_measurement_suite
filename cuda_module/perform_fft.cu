@@ -117,7 +117,7 @@ void perform_fft(std::complex<short>* h_samp_arry, float* h_out, const int resol
 	}
 
 
-	cufft_prep << < (resolution*num_wins) / CU_THD, CU_THD >> > (d_fftbuff, d_samp, d_coef, (num_wins + averaging - 1), resolution); //This will create (WIN_SAMPS*num_wins)/CU_THD blocks, with 1024 threads per block
+	cufft_prep <<< (resolution*num_wins) / CU_THD, CU_THD >> > (d_fftbuff, d_samp, d_coef, (num_wins + averaging - 1), resolution); //This will create (WIN_SAMPS*num_wins)/CU_THD blocks, with 1024 threads per block
 	
 	checkCudaErrors(cudaFree(d_samp));
 	checkCudaErrors(cudaFree(d_coef));
@@ -137,7 +137,8 @@ void perform_fft(std::complex<short>* h_samp_arry, float* h_out, const int resol
 	cudaMemset(d_out, 0, sizeof(float)*resolution * num_wins); //initialise to zero
 	
 	//Do something with the fft'd samples, like average them, then output them to the host, where the host can perform detection.
-	avg_out <<< resolution / CU_THD, CU_THD >>> (d_out, d_fftbuff, num_wins, averaging, offset, resolution);
+	//avg_out <<< resolution / CU_THD, CU_THD >>> (d_out, d_fftbuff, num_wins, averaging, offset, resolution);
+	avg_out_filter << < resolution / CU_THD, CU_THD >> > (d_out, d_fftbuff, num_wins, averaging, offset, resolution);
 	
 	cudaStatus = cudaMemcpy(h_out, d_out, sizeof(float)*resolution * num_wins, cudaMemcpyDeviceToHost);
 	if (cudaStatus != cudaSuccess) {
@@ -184,14 +185,14 @@ static __global__ void avg_out(float* out, cuComplex* d_fft, const int num_wins,
 	int idx = threadIdx.x;
 	float* out_ptr = &out[0];
 	cuComplex* d_fft_ptr = &d_fft[0];
-	const float threshold = -113;
+	const float threshold = -110;
 
 	bool THRESHOLD = true;
 
 	for (int j = 0; j < num_wins; j++){
 
 		for (int i = blockIdx.x * blockDim.x + idx; i < resolution*averaging; i += blockDim.x * gridDim.x){
-
+			//Moving average of each output bin according to the 'averaging' value - typically set to 10
 			out_ptr[((resolution / 2) + i) % resolution] += (
 				10 * log10(abs(d_fft_ptr[i].x * d_fft_ptr[i].x + d_fft_ptr[i].y * d_fft_ptr[i].y) / resolution) //DFT bin magnitude
 				);
@@ -211,6 +212,82 @@ static __global__ void avg_out(float* out, cuComplex* d_fft, const int num_wins,
 		out_ptr += resolution; //increment out_ptr by one frame of averages
 		d_fft_ptr += resolution; //increment d_fft_ptr by number of frames averaged
 	}
+}
+
+static __global__ void avg_out_filter(float* out, cuComplex* d_fft, const int num_wins, const int averaging, const float offset, const int resolution) {
+
+	//Need to modify for appropriate averaging output
+	//Remember whitespace is a 1
+	int idx = threadIdx.x;
+	float* out_ptr = &out[0];
+	cuComplex* d_fft_ptr = &d_fft[0];
+	const float threshold = -113;
+
+	bool THRESHOLD = true;
+
+	for (int j = 0; j < num_wins; j++){
+
+		for (int i = blockIdx.x * blockDim.x + idx; i < resolution*averaging; i += blockDim.x * gridDim.x){
+
+			out_ptr[((resolution / 2) + i) % resolution] += (
+				10 * log10(abs(d_fft_ptr[i].x * d_fft_ptr[i].x + d_fft_ptr[i].y * d_fft_ptr[i].y) / resolution) //DFT bin magnitude
+				);
+		}
+
+		//		__syncthreads();
+
+		if (THRESHOLD){
+			out_ptr[(resolution / 2 + blockIdx.x * blockDim.x + idx) % resolution] = ((out_ptr[(resolution / 2 + blockIdx.x * blockDim.x + idx) % resolution] / averaging + offset) <= threshold) ? 1 : 0;
+		}
+		else {
+			out_ptr[(resolution / 2 + blockIdx.x * blockDim.x + idx) % resolution] = (out_ptr[(resolution / 2 + blockIdx.x * blockDim.x + idx) % resolution] / averaging + offset);
+		}
+		//		if (out_ptr[blockIdx.x * blockDim.x + idx] <= threshold) out_ptr[blockIdx.x * blockDim.x + idx] = 1;
+		//		elseP out_ptr[blockIdx.x * blockDim.x + idx] = 0;
+
+		out_ptr += resolution; //increment out_ptr by one frame of averages
+		d_fft_ptr += resolution; //increment d_fft_ptr by number of frames averaged
+	}
+
+	//Now perform filtering, only if thresholding is performed
+
+	if (THRESHOLD){
+		//Zero out pointer
+		out_ptr = &out[0 + resolution]; //we dont want to filter the first row - at this stage anyway
+		int absthreadidx = blockIdx.x * blockDim.x + threadIdx.x; //I wanted to be more explicit before, shortcutting here
+
+		//j starts at 1 and ends at num_wins-1 to give the sufficient spacing for the 3x3 kernel
+		for (int j = 1; j < num_wins-1; j++){
+
+			if (j == 0) { //first row
+			}
+			else if (j == num_wins - 1) { //last row
+			
+			}
+
+			if (absthreadidx == 0) { //left edge
+			}
+			else if (absthreadidx == resolution - 1) { //right edge
+			}
+
+			else { //everything else
+				//If the centre of a kernel = 1, take a 3 by 3 kernel, and sum the edge cells, if greater than 7, can assume this is noise
+				if (out_ptr[absthreadidx] == 0)
+				{
+					//Currently set to detect a lone cell. Can increase this for more agressive filtering. Though the kernel size may have to increase also
+					if ((out_ptr[absthreadidx - resolution - 1] + out_ptr[absthreadidx - resolution] + out_ptr[absthreadidx - resolution + 1] +
+						out_ptr[absthreadidx - 1] + out_ptr[absthreadidx + 1] +
+						out_ptr[absthreadidx + resolution - 1] + out_ptr[absthreadidx + resolution] + out_ptr[absthreadidx + resolution + 1]) > 6)
+					{
+						out_ptr[absthreadidx] = 1;
+					}
+				}
+			}
+
+			out_ptr += resolution; //next row of output array (as the 2d output is really just a very long 1d array)
+		}
+	}
+
 }
 
 /* BACKUP LOL

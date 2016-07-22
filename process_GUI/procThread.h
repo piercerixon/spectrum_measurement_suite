@@ -11,8 +11,9 @@
 
 const int MIN5 = 5722;
 //const int WIN_SAMPS = 131072;
-const int WIN_SAMPS = 16384;
+//const int WIN_SAMPS = 16384;
 //const int WIN_SAMPS = 2048;
+const int WIN_SAMPS = 131072;
 #ifndef TWO_FOUR_GB
 #define TWO_FOUR_GB
 const int64_t TWO_GB = std::pow(2.0, 31);

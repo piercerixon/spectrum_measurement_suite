@@ -12,9 +12,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="dothething.cu">
-      <Filter>Source Files</Filter>
-    </CudaCompile>
     <CudaCompile Include="dothething_overlap.cu">
       <Filter>Source Files\Deprecated</Filter>
     </CudaCompile>
@@ -24,12 +21,18 @@
     <CudaCompile Include="perform_fft.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
+    <CudaCompile Include="dothething.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuda_module.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cuda_process.cuh">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="fft_module.cuh">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

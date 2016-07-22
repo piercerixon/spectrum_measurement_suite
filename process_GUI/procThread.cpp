@@ -275,17 +275,28 @@ void procThread::prepareFall(float* wsArray, int depth) {
 	QVector <double> wfSlice(vecDim, 0);
 	
 	int loc = 1300; //magic number that relates directly to the PSD plot
-	int64_t index = (loc/std::pow(2.0,11)) * WIN_SAMPS;
+	int64_t index = (loc/std::pow(2.0,11)) * depth;
 
 	// could calculate this based on depth, but ehhhhh
-	int freq = 131072 / WIN_SAMPS;
+	int freq = 131072 / depth;
 	int64_t offset = 0;
-	for (int i = 0; i < dim; i++) {
-		for (int j = 0; j < dim; j++) {
-			wfSlice[j + dim*i] = wsArray[index + i*depth + int(std::floor(j/freq)) + offset];
-		} offset += (131072 - WIN_SAMPS);
-	}
+	//for (int i = 0; i < dim; i++) {
+	//	for (int j = 0; j < dim; j++) {
+	//		wfSlice[j + dim*i] = wsArray[index + i*depth + int(std::floor(j/freq)) + offset];
+	//	} offset += (131072 - WIN_SAMPS);
+	//}
+	int64_t wstotal = 0;
 
+	for (int i = 0; i < dim; i++) {
+		for (int k = 0; k < freq; k++){
+			for (int j = 0; j < dim; j++) {
+				wfSlice[j + dim*i] += wsArray[index +  int(std::floor(j / freq)) + offset];
+				wstotal += wsArray[index + int(std::floor(j / freq)) + offset];
+			} 
+			offset += depth;
+		}
+	}
+	qDebug() << "Whitespace: " << wstotal;
 	emit fallSignal(wfSlice, depth);
 }
 

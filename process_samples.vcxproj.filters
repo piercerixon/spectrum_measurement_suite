@@ -51,6 +51,9 @@
     <ClCompile Include="detect_bw.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="detect_weighted.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="process.h">

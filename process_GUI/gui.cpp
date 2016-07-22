@@ -59,40 +59,31 @@ void gui::initUi() {
 	//Waterfall code
 		waterfall->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom); // this will also allow rescaling the color scale by dragging/zooming
 		waterfall->axisRect()->setupFullAxesBox(true);
-		waterfall->xAxis->setLabel("x");
-		waterfall->yAxis->setLabel("y");
+		waterfall->xAxis->setLabel("Frequency");
+		waterfall->yAxis->setLabel("Time");
 
 		// set up the QCPColorMap:
 		colorMap = new QCPColorMap(waterfall->xAxis, waterfall->yAxis);
 		waterfall->addPlottable(colorMap);
 		int dim = 384;
-		colorMap->data()->setSize(dim, dim); // we want the color map to have nx * ny data points
-		colorMap->data()->setRange(QCPRange(0, dim), QCPRange(0, dim)); // and span the coordinate range -4..4 in both key (x) and value (y) dimensions
+		colorMap->data()->setSize(dim, dim);
+		colorMap->data()->setRange(QCPRange(0, dim), QCPRange(0, dim)); 
 	
-		/*
-		double x, y, z;
-		for (int xIndex = 0; xIndex<nx; ++xIndex)
-		{
-			for (int yIndex = 0; yIndex<ny; ++yIndex)
-			{
-				colorMap->data()->cellToCoord(xIndex, yIndex, &x, &y);
-				double r = 3 * qSqrt(x*x + y*y) + 1e-2;
-				z = 2 * x*(qCos(r + 2) / r - qSin(r + 2) / r); // the B field strength of dipole radiation (modulo physical constants)
-				colorMap->data()->setCell(xIndex, yIndex, z);
-			}
-		}
-		*/
 		// add a color scale:
 		colorScale = new QCPColorScale(waterfall);
 		waterfall->plotLayout()->addElement(0, 1, colorScale); // add it to the right of the main axis rect
 		colorScale->setDataRange(QCPRange(-1, 2));
 		colorScale->setType(QCPAxis::atRight); // scale shall be vertical bar with tick/axis labels right (actually atRight is already the default)
 		colorMap->setColorScale(colorScale); // associate the color map with the color scale
-		//colorScale->axis()->setLabel("Waterfall Plot");
+		colorScale->axis()->setLabel("Whitespace Density");
 		waterfall->plotLayout()->insertRow(0); // inserts an empty row above the default axis rect
-		waterfall->plotLayout()->addElement(0, 0, new QCPPlotTitle(waterfall, "Waterfall Plot"));
-		colorMap->setGradient(QCPColorGradient::gpPolar);
+		waterfall->plotLayout()->addElement(0, 0, new QCPPlotTitle(waterfall, "Waterfall (131072) -121"));
+		colorMap->setGradient(QCPColorGradient::gpHot);
 
+		// make sure the axis rect and color scale synchronize their bottom and top margins (so they line up):
+		QCPMarginGroup *marginGroup = new QCPMarginGroup(waterfall);
+		waterfall->axisRect()->setMarginGroup(QCP::msBottom | QCP::msTop, marginGroup);
+		colorScale->setMarginGroup(QCP::msBottom | QCP::msTop, marginGroup);
 
 	//Connect worker thread to gui plotting function
 	fft_plot->graph(0)->setData(plotMapAvg, false);
@@ -132,10 +123,12 @@ void gui::fallSlot(QVector<double> vals, int depth) {
 		}
 	}
 
-	//colorMap->rescaleDataRange();
+	colorMap->rescaleDataRange();
 
 	waterfall->rescaleAxes();
 	waterfall->replot();
+	QString fname = "Waterfall 131072 -121.png";
+	waterfall->savePng(fname, 0, 0, 1, -1);
 }
 
 void gui::scanSlot() {

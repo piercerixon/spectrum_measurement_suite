@@ -11,6 +11,9 @@ typedef short2 cuComplexShort;
 
 
 static __global__ void avg_out(float* out, cuComplex* d_fft, const int num_wins, const int averaging, const float offset, const int resolution);
+
+static __global__ void avg_out_filter(float* out, cuComplex* d_fft, const int num_wins, const int averaging, const float offset, const int resolution);
+
 static __global__ void cufft_prep(cuComplex* d_fft, cuComplexShort* d_s, float* d_w, const int num_wins, const int resolution);
 
 void cuda_memcheck();
