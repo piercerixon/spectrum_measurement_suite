@@ -137,9 +137,9 @@ void perform_fft(std::complex<short>* h_samp_arry, float* h_out, const int resol
 	cudaMemset(d_out, 0, sizeof(float)*resolution * num_wins); //initialise to zero
 	
 	//Do something with the fft'd samples, like average them, then output them to the host, where the host can perform detection.
-	//avg_out <<< resolution / CU_THD, CU_THD >>> (d_out, d_fftbuff, num_wins, averaging, offset, resolution);
-	avg_out_filter << < resolution / CU_THD, CU_THD >> > (d_out, d_fftbuff, num_wins, averaging, offset, resolution);
-	
+	avg_out <<< resolution / CU_THD, CU_THD >>> (d_out, d_fftbuff, num_wins, averaging, offset, resolution);
+	filter <<< resolution / CU_THD, CU_THD >>> (d_out, num_wins, resolution); //As this uses the correct moving average, num_wins does not have to be divided out
+
 	cudaStatus = cudaMemcpy(h_out, d_out, sizeof(float)*resolution * num_wins, cudaMemcpyDeviceToHost);
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "cudaMemcpy to Host failed! %s", cudaGetErrorString(cudaStatus));
@@ -179,17 +179,107 @@ static __global__ void cufft_prep(cuComplex* d_fft, cuComplexShort* d_s, float* 
 	//if(idx == 0) printf("d_s[%d]: %f,%f fftbuff %f,%f\n", idx, d_s[idx].x, d_s[idx].y, d_s[idx].x, d_s[idx].x);
 }
 
+static __global__ void filter(float*out, const int num_wins, const int resolution){
+
+	int idx = threadIdx.x;
+	int stride = blockDim.x * gridDim.x;
+	float* out_ptr = &out[0];
+	const int fiveby_filter_level = 13; //normally 16 for 5x5, 13 for aggressive.
+	const int filter_level = 5; // 3x3 kernel 
+
+	bool FIVEBY = true; //for use later
+
+	//increment loop by 1, and decrease total run by 1 to accomodate for edges of the kernel
+	if (!FIVEBY){
+		for (int i = (blockIdx.x * blockDim.x + idx) + stride; i < resolution*(num_wins - 1); i += stride){
+
+			if (out_ptr[i] == 0 && (blockIdx.x + idx != 0 || blockIdx.x + idx != resolution - 1)){
+				if ((out_ptr[i - 1 - stride] + out_ptr[i - stride] + out_ptr[i + 1 - stride] +
+					out_ptr[i - 1] + out_ptr[i + 1] +
+					out_ptr[i - 1 + stride] + out_ptr[i + stride] + out_ptr[i + 1 + stride]) > filter_level){
+
+					out_ptr[i] = 1;
+				}
+			}
+		}
+	}
+	if (FIVEBY){
+		//special case code for handling the beginning and end of the image, note that edges are ignored as they are significantly less impactful on window generation
+
+		for (int i = blockIdx.x * blockDim.x + idx, j = 0; i < stride*(num_wins); i += stride, j++){
+
+			if (out_ptr[i] == 0 && (blockIdx.x * blockDim.x + idx != 0 && blockIdx.x * blockDim.x + idx != resolution - 1 &&
+				blockIdx.x * blockDim.x + idx != 1 && blockIdx.x * blockDim.x + idx != resolution - 2)){
+
+				if (j == 0){
+					if (( //unrolled here for efficiencies
+						out_ptr[i - 2] + out_ptr[i - 1] + out_ptr[i + 1] + out_ptr[i + 2] +
+						out_ptr[i - 2 + stride] + out_ptr[i - 1 + stride] + out_ptr[i + stride] + out_ptr[i + 1 + stride] + out_ptr[i + 2 + stride] +
+						out_ptr[i - 2 + 2 * stride] + out_ptr[i - 1 + 2 * stride] + out_ptr[i + 2 * stride] + out_ptr[i + 1 + 2 * stride] + out_ptr[i + 2 + 2 * stride]) > fiveby_filter_level - 6)
+					{
+						out_ptr[i] = 1;
+					}
+				}
+
+				else if (j == 1){
+					if (( //unrolled here for efficiencies
+						out_ptr[i - 2 - stride] + out_ptr[i - 1 - stride] + out_ptr[i - stride] + out_ptr[i + 1 - stride] + out_ptr[i + 2 - stride] +
+						out_ptr[i - 2] + out_ptr[i - 1] + out_ptr[i + 1] + out_ptr[i + 2] +
+						out_ptr[i - 2 + stride] + out_ptr[i - 1 + stride] + out_ptr[i + stride] + out_ptr[i + 1 + stride] + out_ptr[i + 2 + stride] +
+						out_ptr[i - 2 + 2 * stride] + out_ptr[i - 1 + 2 * stride] + out_ptr[i + 2 * stride] + out_ptr[i + 1 + 2 * stride] + out_ptr[i + 2 + 2 * stride]) > fiveby_filter_level - 3)
+					{
+						out_ptr[i] = 1;
+					}
+				}
+
+				else if (j >= 2 && j < num_wins - 2){
+					if (( //unrolled here for efficiencies
+						out_ptr[i - 2 - 2 * stride] + out_ptr[i - 1 - 2 * stride] + out_ptr[i - 2 * stride] + out_ptr[i + 1 - 2 * stride] + out_ptr[i + 2 - 2 * stride] +
+						out_ptr[i - 2 - stride] + out_ptr[i - 1 - stride] + out_ptr[i - stride] + out_ptr[i + 1 - stride] + out_ptr[i + 2 - stride] +
+						out_ptr[i - 2] + out_ptr[i - 1] + out_ptr[i + 1] + out_ptr[i + 2] +
+						out_ptr[i - 2 + stride] + out_ptr[i - 1 + stride] + out_ptr[i + stride] + out_ptr[i + 1 + stride] + out_ptr[i + 2 + stride] +
+						out_ptr[i - 2 + 2 * stride] + out_ptr[i - 1 + 2 * stride] + out_ptr[i + 2 * stride] + out_ptr[i + 1 + 2 * stride] + out_ptr[i + 2 + 2 * stride]) > fiveby_filter_level)
+					{
+						out_ptr[i] = 1;
+					}
+				}
+
+				else if (j == num_wins - 2){
+					if (( //unrolled here for efficiencies, this isnt called ... bug
+						out_ptr[i - 2 - 2 * stride] + out_ptr[i - 1 - 2 * stride] + out_ptr[i - 2 * stride] + out_ptr[i + 1 - 2 * stride] + out_ptr[i + 2 - 2 * stride] +
+						out_ptr[i - 2 - stride] + out_ptr[i - 1 - stride] + out_ptr[i - stride] + out_ptr[i + 1 - stride] + out_ptr[i + 2 - stride] +
+						out_ptr[i - 2] + out_ptr[i - 1] + out_ptr[i + 1] + out_ptr[i + 2] +
+						out_ptr[i - 2 + stride] + out_ptr[i - 1 + stride] + out_ptr[i + stride] + out_ptr[i + 1 + stride] + out_ptr[i + 2 + stride]) > fiveby_filter_level - 3)
+					{
+						out_ptr[i] = 1;
+					}
+				}
+
+				else if (j == num_wins - 1){
+					if (( //unrolled here for efficiencies, neither is this ... BUG!!!!!
+						out_ptr[i - 2 - 2 * stride] + out_ptr[i - 1 - 2 * stride] + out_ptr[i - 2 * stride] + out_ptr[i + 1 - 2 * stride] + out_ptr[i + 2 - 2 * stride] +
+						out_ptr[i - 2 - stride] + out_ptr[i - 1 - stride] + out_ptr[i - stride] + out_ptr[i + 1 - stride] + out_ptr[i + 2 - stride] +
+						out_ptr[i - 2] + out_ptr[i - 1] + out_ptr[i + 1] + out_ptr[i + 2]) > fiveby_filter_level - 6)
+					{
+						out_ptr[i] = 1;
+					}
+				}
+			}
+		}
+	}
+}
+
 static __global__ void avg_out(float* out, cuComplex* d_fft, const int num_wins, const int averaging, const float offset, const int resolution) {
 	
 	//Need to modify for appropriate averaging output
 	int idx = threadIdx.x;
 	float* out_ptr = &out[0];
 	cuComplex* d_fft_ptr = &d_fft[0];
-	const float threshold = -110;
+	const float threshold = -113;
 
 	bool THRESHOLD = true;
 
-	for (int j = 0; j < num_wins; j++){
+	for (int j = 0; j < num_wins; j++){ //what about the final set of frames? They should be retained and re-computed to maintain accurate averaging ...
 
 		for (int i = blockIdx.x * blockDim.x + idx; i < resolution*averaging; i += blockDim.x * gridDim.x){
 			//Moving average of each output bin according to the 'averaging' value - typically set to 10
@@ -210,10 +300,11 @@ static __global__ void avg_out(float* out, cuComplex* d_fft, const int num_wins,
 //		elseP out_ptr[blockIdx.x * blockDim.x + idx] = 0;
 
 		out_ptr += resolution; //increment out_ptr by one frame of averages
-		d_fft_ptr += resolution; //increment d_fft_ptr by number of frames averaged
+		d_fft_ptr += resolution; //increment d_fft_ptr by one frame to maintain rolling average
 	}
 }
 
+/* DEPRECATED
 static __global__ void avg_out_filter(float* out, cuComplex* d_fft, const int num_wins, const int averaging, const float offset, const int resolution) {
 
 	//Need to modify for appropriate averaging output
@@ -221,9 +312,12 @@ static __global__ void avg_out_filter(float* out, cuComplex* d_fft, const int nu
 	int idx = threadIdx.x;
 	float* out_ptr = &out[0];
 	cuComplex* d_fft_ptr = &d_fft[0];
-	const float threshold = -113;
+	const float threshold = -116;
+	const int filter_level = 13; //normally 16 for fiveby, 13 for aggressive
 
 	bool THRESHOLD = true;
+	bool FILTER = true;
+	bool FIVEBY = false;
 
 	for (int j = 0; j < num_wins; j++){
 
@@ -251,7 +345,7 @@ static __global__ void avg_out_filter(float* out, cuComplex* d_fft, const int nu
 
 	//Now perform filtering, only if thresholding is performed
 
-	if (THRESHOLD){
+	if (THRESHOLD && FILTER && !FIVEBY){
 		//Zero out pointer
 		out_ptr = &out[0 + resolution]; //we dont want to filter the first row - at this stage anyway
 		int absthreadidx = blockIdx.x * blockDim.x + threadIdx.x; //I wanted to be more explicit before, shortcutting here
@@ -288,7 +382,49 @@ static __global__ void avg_out_filter(float* out, cuComplex* d_fft, const int nu
 		}
 	}
 
+	else if (THRESHOLD && FILTER && FIVEBY){
+		//Zero out pointer
+		out_ptr = &out[0 + 2 * resolution]; //we dont want to filter the first 2 rows - at this stage anyway
+		int absthreadidx = blockIdx.x * blockDim.x + threadIdx.x; //I wanted to be more explicit before, shortcutting here
+
+		//j starts at 1 and ends at num_wins-1 to give the sufficient spacing for the 3x3 kernel
+		for (int j = 2; j < num_wins - 2; j++){
+
+			if (j == 0 || j == 1) { //first row
+			}
+			else if (j == num_wins - 2 || j == num_wins - 1) { //last row
+
+			}
+
+			if (absthreadidx == 0 || absthreadidx == 1) { //left edge
+			}
+			else if (absthreadidx == resolution - 1 || absthreadidx == resolution - 2) { //right edge
+			}
+
+			else { //everything else
+				//If the centre of a kernel = 1, take a 3 by 3 kernel, and sum the edge cells, if greater than filter_level, can assume this is noise
+				if (out_ptr[absthreadidx] == 0)
+				{
+					//Currently set to detect a lone cell. Can increase this for more agressive filtering. Though the kernel size may have to increase also
+					if ((
+						out_ptr[absthreadidx - 2 * resolution - 2] + out_ptr[absthreadidx - 2 * resolution - 1] + out_ptr[absthreadidx - 2 * resolution] + out_ptr[absthreadidx - 2 * resolution + 1] + out_ptr[absthreadidx - 2 * resolution + 2] +
+						out_ptr[absthreadidx - resolution - 2] + out_ptr[absthreadidx - resolution - 1] + out_ptr[absthreadidx - resolution] + out_ptr[absthreadidx - resolution + 1] + out_ptr[absthreadidx - resolution + 2] +
+						out_ptr[absthreadidx - 2] + out_ptr[absthreadidx - 1] + out_ptr[absthreadidx + 1] + out_ptr[absthreadidx + 2] +
+						out_ptr[absthreadidx + resolution - 2] + out_ptr[absthreadidx + resolution - 1] + out_ptr[absthreadidx + resolution] + out_ptr[absthreadidx + resolution + 1] + out_ptr[absthreadidx + resolution + 2] +
+						out_ptr[absthreadidx + 2 * resolution - 2] + out_ptr[absthreadidx + 2 * resolution - 1] + out_ptr[absthreadidx + 2 * resolution] + out_ptr[absthreadidx + 2 * resolution + 1] + out_ptr[absthreadidx + 2 * resolution + 2]
+						) > filter_level)
+					{
+						out_ptr[absthreadidx] = 1;
+					}
+				}
+			}
+
+			out_ptr += resolution; //next row of output array (as the 2d output is really just a very long 1d array)
+		}
+	}
+
 }
+/*
 
 /* BACKUP LOL
 static __global__ void avg_out(float* out, cuComplex* d_fft, const int num_wins, const int averaging) {

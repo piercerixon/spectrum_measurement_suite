@@ -217,13 +217,15 @@ void procThread::run(){
 		
 		//processed_ptr += ((reqFrame - t_rng_min)*WIN_SAMPS);
 		processed_ptr = &processed_ptr_base[0];
-		prepareFall(processed_ptr, WIN_SAMPS);
+		
 
 		processed_ptr = &processed_ptr_base[(reqFrame - t_rng_min)*WIN_SAMPS];
 		qDebug() << "processed_ptr idx: " << (reqFrame - t_rng_min) << "* WIN_SAMPS";
-		//preparePlot(processed_ptr, WIN_SAMPS);
 
-		//Need to do cheeky cuda things here, the biggest blocking call is reading the samples in
+		prepareFall(processed_ptr, WIN_SAMPS); //THRESHOLDED
+		//preparePlot(processed_ptr, WIN_SAMPS); //RAW POWER LEVELS
+
+		//May need to do cheeky cuda things here ... one day, the biggest blocking call is reading the samples in
 
 		//at the end of the junk, wait to be asked to do more junk n.n
 		mutex.lock();
@@ -271,11 +273,16 @@ void procThread::run(){
 void procThread::prepareFall(float* wsArray, int depth) {
 	//a single fft frame is equal to depth and wsArray is a pointer to the processed data. 
 	int dim = 384;
-	int vecDim = dim*dim; //build a 640 square of pixels for the waterfall, ensure these dims are the same in gui.cpp yea magic numbers!
+	int vecDim = dim*dim; //build a 384 square of pixels for the waterfall, ensure these dims are the same in gui.cpp yea magic numbers!
 	QVector <double> wfSlice(vecDim, 0);
 	
-	int loc = 1300; //magic number that relates directly to the PSD plot
-	int64_t index = (loc/std::pow(2.0,11)) * depth;
+	/** ORIGINAL LOCATION PLOT FOR TESTS **/
+	//int loc = 1300; //magic number that relates directly to the PSD plot
+	//int64_t index = (loc/std::pow(2.0,11)) * depth;
+	
+	//int64_t index = 13140;
+	int64_t index = 15200;
+	//int64_t index = 65536-192;
 
 	// could calculate this based on depth, but ehhhhh
 	int freq = 131072 / depth;
@@ -302,6 +309,7 @@ void procThread::prepareFall(float* wsArray, int depth) {
 
 void procThread::preparePlot(float* powerArray, int size){
 
+	qDebug() << "Please note, this requires a NON THRESHOLDED set of samples. The waterfall and plot are mutually exclusive";
 	//plotLength set to 2048, so only a max of 2048 datapoints are displayed.
 	//additionally, the max datapoint under each step will be the only
 	int step = size / plotLength;
@@ -324,6 +332,7 @@ void procThread::preparePlot(float* powerArray, int size){
 			if (powerArray[i*step + j] < min) min = powerArray[i*step + j];
 
 		}
+		
 		temp /= step;
 		plotAvg[i] = temp;
 		plotMax[i] = max;

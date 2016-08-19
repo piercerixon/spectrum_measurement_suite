@@ -193,8 +193,8 @@ int main(int argc, char*argv[]) {
 	
 	select_file(dataset);
 
-	//read_samples_plot(dataset);
-	read_samples_outwins(dataset);
+	//read_samples_plot(dataset); //BW = 1
+	read_samples_outwins(dataset); // Greedy allocation
 	return(0);
 
 	//Program should never get past here (with GPU), preserving for just incasesies ;)
@@ -985,8 +985,8 @@ void read_samples_plot(char* sampbase){
 
 				//detect(processed_ptr, (currwins / averaging) - 1, ws_array, overlap, w_vec_ptr, &frame_number);
 				
-				//detect_ts_rec(processed_ptr, ts_array, currwins - 1, ws_array, w_vec_ptr, &frame_number);
-				detect_bw_rec(processed_ptr, rec_array, currwins - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+				detect_ts_rec(processed_ptr, ts_array, currwins - 1, ws_array, w_vec_ptr, &frame_number);
+				//detect_bw_rec(processed_ptr, rec_array, currwins - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
 				
 				//detect(processed_ptr, ((currwins*samp_overlap) / averaging) - 1, ws_array, overlap, w_vec_ptr, &frame_number);
 			}
@@ -997,14 +997,14 @@ void read_samples_plot(char* sampbase){
 					frames_remain = MIN5*averaging - frame_number;
 
 					//last of the frames for this 5 minute segment
-					//detect_ts_rec(processed_ptr, ts_array, frames_remain, ws_array, w_vec_ptr, &frame_number);
-					detect_bw_rec(processed_ptr, rec_array, frames_remain, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+					detect_ts_rec(processed_ptr, ts_array, frames_remain, ws_array, w_vec_ptr, &frame_number);
+					//detect_bw_rec(processed_ptr, rec_array, frames_remain, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
 
 					//cap it off
 					frame_number++;
 					
-					//detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
-					detect_bw_rec_once(zero_frame, rec_array, 1, ws_array, w_vec_ptr, frame_number, &bw_ws_count);
+					detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
+					//detect_bw_rec_once(zero_frame, rec_array, 1, ws_array, w_vec_ptr, frame_number, &bw_ws_count);
 
 					//increment processed_ptr appropriately
 					processed_ptr += WIN_SAMPS * frames_remain;
@@ -1030,12 +1030,12 @@ void read_samples_plot(char* sampbase){
 #ifndef _DEBUG
 					//call_py_plot(ts_array, SCALE, plot_id, total_ws); //It looks like ts_array is going out of scope when this is being plotted T.T
 
-					call_py_plot(rec_array, SCALE, plot_id, total_ws); //It looks like ts_array is going out of scope when this is being plotted T.T
+					if (false) call_py_plot(rec_array, SCALE, plot_id, total_ws); //It looks like ts_array is going out of scope when this is being plotted T.T
 #endif
 	
-					if (false) {
+					if (true) {
 						//This is here to provide the final window detection and outputting of the window vector to file.
-						csv_filename = "\.\\5min\\window_dump_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+						csv_filename = "\.\\partitioning\\window_dump_" + boost::lexical_cast<std::string>(plot_id)+"_BW=1.csv";
 						window_dump.open(csv_filename);
 						window_dump << "timescale,frequency,bandwidth,whitespace,frame_no\n";
 						std::cout << "Outputting Whitespace Windows" << std::endl;
@@ -1071,13 +1071,13 @@ void read_samples_plot(char* sampbase){
 					}
 
 					//record the remainder of the windows
-					//detect_ts_rec(processed_ptr, ts_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number); //IT IS NOT CURRWINS/AVERAGING
-					detect_bw_rec(processed_ptr, rec_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+					detect_ts_rec(processed_ptr, ts_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number); //IT IS NOT CURRWINS/AVERAGING
+					//detect_bw_rec(processed_ptr, rec_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
 				}
 				else {
 					//detect(processed_ptr, (currwins / averaging), ws_array, overlap, w_vec_ptr, &frame_number);
-					//detect_ts_rec(processed_ptr, ts_array, currwins, ws_array, w_vec_ptr, &frame_number);
-					detect_bw_rec(processed_ptr, rec_array, currwins, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+					detect_ts_rec(processed_ptr, ts_array, currwins, ws_array, w_vec_ptr, &frame_number);
+					//detect_bw_rec(processed_ptr, rec_array, currwins, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
 					//detect(processed_ptr, ((currwins*samp_overlap) / averaging), ws_array, overlap, w_vec_ptr, &frame_number);
 				}
 			}
@@ -1088,8 +1088,8 @@ void read_samples_plot(char* sampbase){
 	//Close the samples off
 	frame_number++;
 	//detect_once(ws_frame, 1, ws_array, overlap, w_vec_ptr, frame_number);
-	//detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
-	detect_bw_rec_once(zero_frame, rec_array, 1, ws_array, w_vec_ptr, frame_number, &bw_ws_count);
+	detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
+	//detect_bw_rec_once(zero_frame, rec_array, 1, ws_array, w_vec_ptr, frame_number, &bw_ws_count);
 
 	if (false) {
 		for (int i = 0; i < MIN5; i++) {
@@ -1104,13 +1104,13 @@ void read_samples_plot(char* sampbase){
 
 	//call final plot
 #ifndef _DEBUG
-	call_py_plot(rec_array, SCALE, plot_id, total_ws);
+	if (false) call_py_plot(rec_array, SCALE, plot_id, total_ws);
 #endif
 	
-	if (false) {
+	if (true) {
 
 		//This is here to provide the final window detection and outputting of the window vector to file.
-		csv_filename = "\.\\5min\\window_dump_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+		csv_filename = "\.\\partitioning\\window_dump_" + boost::lexical_cast<std::string>(plot_id)+"_BW=1.csv";
 		window_dump.open(csv_filename);
 		window_dump << "timescale,frequency,bandwidth,whitespace,frame_no\n";
 		std::cout << "Outputting final whitespace windows" << std::endl;
@@ -1295,7 +1295,7 @@ void read_samples_outwins(char* sampbase){
 
 	//std::cout << std::endl <<  std::endl << bytes_to_read << " Read this many samps please\n\n";
 	//This is where all the processing happens
-	//This will generate unique plots for every 5722 frames (MIN5) (set at OLD 10 AVERAGING ... i.e. frame TS = 52.4288ms) ... this number would be significantly higher once that is fixed
+	//This will generate unique plots for every 57220 frames (MIN5)
 	while (bytesread != 0){
 
 		in_samples.read((char*)re, bytes_to_read);
@@ -1315,6 +1315,7 @@ void read_samples_outwins(char* sampbase){
 				std::cout << in_samples.gcount() << " additional Bytes read. " << in_samples.gcount() + bytesread << " total Bytes read.";
 				bytesread += in_samples.gcount();
 
+				//Correctly retain samples that are not completely averaged yet.
 				if (bytesleft >= WIN_SAMPS*(averaging - 1)*sizeof(std::complex<short>)) in_samples.seekg(bytesleft - WIN_SAMPS*(averaging - 1)*sizeof(std::complex<short>));
 				else if (bytesleft - WIN_SAMPS*(averaging - 1)*sizeof(std::complex<short>) < 0) { //edge case if average buffer spans 2 files
 					in_samples.close();

@@ -77,7 +77,7 @@ void gui::initUi() {
 		colorMap->setColorScale(colorScale); // associate the color map with the color scale
 		colorScale->axis()->setLabel("Whitespace Density");
 		waterfall->plotLayout()->insertRow(0); // inserts an empty row above the default axis rect
-		waterfall->plotLayout()->addElement(0, 0, new QCPPlotTitle(waterfall, "Waterfall (131072) -121"));
+		waterfall->plotLayout()->addElement(0, 0, new QCPPlotTitle(waterfall, "Waterfall (131072) -117 Filter Aggressive"));
 		colorMap->setGradient(QCPColorGradient::gpHot);
 
 		// make sure the axis rect and color scale synchronize their bottom and top margins (so they line up):
@@ -98,7 +98,7 @@ void gui::initUi() {
 
 void gui::plotSlot(QVector<double> yAvg, QVector<double> yMax, QVector<double> yMin){
 	qDebug() << "signal received";
-	QCustomPlot* fft_plot = ui.plot_0;
+	//QCustomPlot* fft_plot = ui.plot_0;
 
 	for (int i = 0; i < yAvg.length(); i++) {
 		plotMapAvg->insert((double)i, QCPData((double)(i + 1), yAvg[i]));
@@ -106,7 +106,8 @@ void gui::plotSlot(QVector<double> yAvg, QVector<double> yMax, QVector<double> y
 		plotMapMin->insert((double)i, QCPData((double)(i + 1), yMin[i]));
 	}
 
-	fft_plot->replot();
+	//fft_plot->replot();
+	ui.plot_0->replot();
 	qDebug() << "Plot updated!";
 }
 
@@ -127,7 +128,7 @@ void gui::fallSlot(QVector<double> vals, int depth) {
 
 	waterfall->rescaleAxes();
 	waterfall->replot();
-	QString fname = "Waterfall 131072 -121.png";
+	QString fname = "Filtered Images/Waterfall 131072 Test.png";
 	waterfall->savePng(fname, 0, 0, 1, -1);
 }
 

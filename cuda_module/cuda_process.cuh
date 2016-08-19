@@ -11,6 +11,7 @@ typedef short2 cuComplexShort;
 //void dothething(std::complex<short>*, const int);
 static __global__ void avg_out(float*, cuComplex*, const int, const int, const float);
 static __global__ void cufft_prep(cuComplex*, cuComplexShort*, float*, const int);
+static __global__ void filter_test(float*, const int);
 
 static __global__ void avg_out_overlap(float*, cuComplex*, const int, const int, const float, int);
 static __global__ void cufft_prep_overlap(cuComplex*, cuComplexShort*, float*, const int, int);
