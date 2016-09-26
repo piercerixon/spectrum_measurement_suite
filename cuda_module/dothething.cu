@@ -122,7 +122,8 @@ void dothething(std::complex<short>* h_samp_arry, float* h_out, const int averag
 	//Do something with the fft'd samples, like average them, then output them to the host, where the host can perform detection.
 	avg_out <<< NUM_SAMPS / CU_THD, CU_THD >> >(d_out, d_fftbuff, num_wins, averaging, offset);
 	
-	filter_test <<< NUM_SAMPS / CU_THD, CU_THD >> >(d_out, num_wins/averaging);
+	//Enable this to filter THRESHOLDED samples. WILL NOT WORK ON RAW POWER LEVEL
+	//filter_test <<< NUM_SAMPS / CU_THD, CU_THD >> >(d_out, num_wins/averaging);
 
 	cudaStatus = cudaMemcpy(h_out, d_out, sizeof(float)*NUM_SAMPS * num_wins/averaging, cudaMemcpyDeviceToHost);
 	if (cudaStatus != cudaSuccess) {
@@ -270,7 +271,7 @@ static __global__ void avg_out(float* out, cuComplex* d_fft, const int num_wins,
 	cuComplex* d_fft_ptr = &d_fft[0];
 	const float threshold = -116;
 
-	bool THRESHOLD = true;
+	bool THRESHOLD = false;
 
 	for (int j = 0; j < num_wins / averaging; j++){
 

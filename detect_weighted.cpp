@@ -168,6 +168,3 @@ void detect_greedy(float* ws_frame, const int num_wins, int(* ws_array)[2], std:
 	}
 
 }
-
-
-/*********************This is also known as MaxCover********************/

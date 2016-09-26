@@ -88,7 +88,7 @@ void detect_ts_rec(float* ws_frame, double* record, const int num_wins, int* ws_
 			ws_ptr += WIN_SAMPS;  //set ws_ptr to the beginning of the current whitespace frame (this is used for multiple frames in an array)
 			(*frame_num)++;
 		}
-		temp = (m + 1) % 100;
+		temp = (m + 1) % 500;
 		if (temp == 0 || m+1 == num_wins) std::cout << "Detecting " << m + 1 << " of " << num_wins;
 
 		for (int i = 0 + active_bw; i < WIN_SAMPS - active_bw; i++) {

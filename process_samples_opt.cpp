@@ -185,6 +185,7 @@ int python_test() { //This will be deprecated in due time
 
 	return 0;
 }
+#endif
 
 int main(int argc, char*argv[]) {
 	//Very exciting main
@@ -200,7 +201,7 @@ int main(int argc, char*argv[]) {
 	//Program should never get past here (with GPU), preserving for just incasesies ;)
 	//Probably should look into some kind of realtime plotting display for use with GPU ... one day... WE HAVE IT! Qt to the rescue do do-do do! 
 }
-
+#ifdef _DEBUG
 /*
 	//Logfile
 	if(LOG) logfile.open("logfile.log",std::ofstream::out);
@@ -434,10 +435,12 @@ int main(int argc, char*argv[]) {
 	system("pause");
 	}
 	*/
+#endif
 
 void create_folders(){
 
 	//Might want to change where these are created?
+	char path[] = "\.\\Partitioning";
 	char path0[] = "\.\\5min";
 	CreateDirectory(path0, NULL);
 	/*char path1[] = "\.\\10min";
@@ -457,6 +460,7 @@ void create_folders(){
 	CreateDirectory(path02, NULL);
 }
 
+#ifndef _DEBUG
 void call_py_plot(double *inArr, int scale, int id, double total) {
 
 	if (PyCallable_Check(pFunc)) {
@@ -776,7 +780,11 @@ void read_samples(char* sampbase){
 	//bar_plot(&window_vec); //If the end of the data has been reached, then display the data
 }
 
+
 void read_samples_plot(char* sampbase){
+
+	bool BW = false; //perform a bandwidth analysis (DURATION FORCED = 1)
+	bool TS = true; //perform a duration analysis (BANDWIDTH FORCED = 1)
 
 	//Configuration
 	std::string base = sampbase;
@@ -985,8 +993,8 @@ void read_samples_plot(char* sampbase){
 
 				//detect(processed_ptr, (currwins / averaging) - 1, ws_array, overlap, w_vec_ptr, &frame_number);
 				
-				detect_ts_rec(processed_ptr, ts_array, currwins - 1, ws_array, w_vec_ptr, &frame_number);
-				//detect_bw_rec(processed_ptr, rec_array, currwins - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+				if(TS) detect_ts_rec(processed_ptr, ts_array, currwins - 1, ws_array, w_vec_ptr, &frame_number);
+				else if(BW) detect_bw_rec(processed_ptr, rec_array, currwins - 1, ws_array, w_vec_ptr, &frame_number);
 				
 				//detect(processed_ptr, ((currwins*samp_overlap) / averaging) - 1, ws_array, overlap, w_vec_ptr, &frame_number);
 			}
@@ -997,14 +1005,14 @@ void read_samples_plot(char* sampbase){
 					frames_remain = MIN5*averaging - frame_number;
 
 					//last of the frames for this 5 minute segment
-					detect_ts_rec(processed_ptr, ts_array, frames_remain, ws_array, w_vec_ptr, &frame_number);
-					//detect_bw_rec(processed_ptr, rec_array, frames_remain, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+					if(TS) detect_ts_rec(processed_ptr, ts_array, frames_remain, ws_array, w_vec_ptr, &frame_number);
+					else if(BW) detect_bw_rec(processed_ptr, rec_array, frames_remain, ws_array, w_vec_ptr, &frame_number);
 
 					//cap it off
 					frame_number++;
 					
-					detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
-					//detect_bw_rec_once(zero_frame, rec_array, 1, ws_array, w_vec_ptr, frame_number, &bw_ws_count);
+					if(TS) detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
+					else if(BW) detect_bw_rec_once(zero_frame, rec_array, 1, ws_array, w_vec_ptr, frame_number, &bw_ws_count);
 
 					//increment processed_ptr appropriately
 					processed_ptr += WIN_SAMPS * frames_remain;
@@ -1035,7 +1043,8 @@ void read_samples_plot(char* sampbase){
 	
 					if (true) {
 						//This is here to provide the final window detection and outputting of the window vector to file.
-						csv_filename = "\.\\partitioning\\window_dump_" + boost::lexical_cast<std::string>(plot_id)+"_BW=1.csv";
+						if(TS) csv_filename = "\.\\partitioning\\window_dump_duration_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+						else if(BW) csv_filename = "\.\\partitioning\\window_dump_bandwidth_" + boost::lexical_cast<std::string>(plot_id)+".csv";
 						window_dump.open(csv_filename);
 						window_dump << "timescale,frequency,bandwidth,whitespace,frame_no\n";
 						std::cout << "Outputting Whitespace Windows" << std::endl;
@@ -1071,13 +1080,13 @@ void read_samples_plot(char* sampbase){
 					}
 
 					//record the remainder of the windows
-					detect_ts_rec(processed_ptr, ts_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number); //IT IS NOT CURRWINS/AVERAGING
-					//detect_bw_rec(processed_ptr, rec_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+					if(TS) detect_ts_rec(processed_ptr, ts_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number); //IT IS NOT CURRWINS/AVERAGING
+					else if(BW) detect_bw_rec(processed_ptr, rec_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number);
 				}
 				else {
 					//detect(processed_ptr, (currwins / averaging), ws_array, overlap, w_vec_ptr, &frame_number);
-					detect_ts_rec(processed_ptr, ts_array, currwins, ws_array, w_vec_ptr, &frame_number);
-					//detect_bw_rec(processed_ptr, rec_array, currwins, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+					if(TS) detect_ts_rec(processed_ptr, ts_array, currwins, ws_array, w_vec_ptr, &frame_number);
+					else if(BW) detect_bw_rec(processed_ptr, rec_array, currwins, ws_array, w_vec_ptr, &frame_number);
 					//detect(processed_ptr, ((currwins*samp_overlap) / averaging), ws_array, overlap, w_vec_ptr, &frame_number);
 				}
 			}
@@ -1088,8 +1097,8 @@ void read_samples_plot(char* sampbase){
 	//Close the samples off
 	frame_number++;
 	//detect_once(ws_frame, 1, ws_array, overlap, w_vec_ptr, frame_number);
-	detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
-	//detect_bw_rec_once(zero_frame, rec_array, 1, ws_array, w_vec_ptr, frame_number, &bw_ws_count);
+	if(TS) detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
+	else if(BW) detect_bw_rec_once(zero_frame, rec_array, 1, ws_array, w_vec_ptr, frame_number, &bw_ws_count);
 
 	if (false) {
 		for (int i = 0; i < MIN5; i++) {
@@ -1110,7 +1119,8 @@ void read_samples_plot(char* sampbase){
 	if (true) {
 
 		//This is here to provide the final window detection and outputting of the window vector to file.
-		csv_filename = "\.\\partitioning\\window_dump_" + boost::lexical_cast<std::string>(plot_id)+"_BW=1.csv";
+		if (TS) csv_filename = "\.\\partitioning\\window_dump_duration_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+		else if (BW) csv_filename = "\.\\partitioning\\window_dump_bandwidth_" + boost::lexical_cast<std::string>(plot_id)+".csv";
 		window_dump.open(csv_filename);
 		window_dump << "timescale,frequency,bandwidth,whitespace,frame_no\n";
 		std::cout << "Outputting final whitespace windows" << std::endl;
@@ -1139,6 +1149,15 @@ void read_samples_plot(char* sampbase){
 }
 
 void read_samples_outwins(char* sampbase){
+
+	bool GREEDY = false;
+	bool TS = false;
+	bool BW = true;
+
+	if (GREEDY == TS && TS == BW) {
+		std::cout << "No algorithm specified, terminating";
+		exit(0);
+	}
 
 	//Configuration
 	std::string base = sampbase;
@@ -1250,12 +1269,14 @@ void read_samples_outwins(char* sampbase){
 	bool init = true;
 
 	int ws_array[WIN_SAMPS][2]; //currently 2, as 0 is the actual WS frame, and 1 is the current window that is spanning that opportunity
+	int ws_1d_array[WIN_SAMPS];
 	float zero_frame[WIN_SAMPS];
 	int overlap[WIN_SAMPS];
 
 	for (int i = 0; i < WIN_SAMPS; i++){
 		ws_array[i][0] = 0;
 		ws_array[i][1] = 0;
+		ws_1d_array[i] = 0;
 		zero_frame[i] = 0;
 		overlap[i] = 0;
 	}
@@ -1342,15 +1363,16 @@ void read_samples_outwins(char* sampbase){
 			if (init) {
 				for (int i = 0; i < WIN_SAMPS; i++) {
 					ws_array[i][0] = processed_ptr[i]; //This is done because the first entry in ws_array has to be initialised with the first frame
+					ws_1d_array[i] = processed_ptr[i];
 				}
 				init = false;
 				processed_ptr += WIN_SAMPS;
 				frame_number++;
 
 				//detect(processed_ptr, (currwins / averaging) - 1, ws_array, overlap, w_vec_ptr, &frame_number);
-				//detect_ts_rec(processed_ptr, ts_array, currwins - 1, ws_array, w_vec_ptr, &frame_number);
-				//detect_bw_rec(processed_ptr, rec_array, currwins - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
-				detect_greedy(processed_ptr, currwins - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+				if(TS) detect_ts_rec(processed_ptr, ts_array, currwins - 1, ws_1d_array, w_vec_ptr, &frame_number);
+				if(BW) detect_bw_rec(processed_ptr, rec_array, currwins - 1, ws_1d_array, w_vec_ptr, &frame_number);
+				if(GREEDY) detect_greedy(processed_ptr, currwins - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
 
 				//detect(processed_ptr, ((currwins*samp_overlap) / averaging) - 1, ws_array, overlap, w_vec_ptr, &frame_number);
 			}
@@ -1361,16 +1383,16 @@ void read_samples_outwins(char* sampbase){
 					frames_remain = MIN5*averaging - frame_number;
 
 					//last of the frames for this 5 minute segment
-					//detect_ts_rec(processed_ptr, ts_array, frames_remain, ws_array, w_vec_ptr, &frame_number);
-					//detect_bw_rec(processed_ptr, rec_array, frames_remain, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
-					detect_greedy(processed_ptr, frames_remain, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+					if(TS) detect_ts_rec(processed_ptr, ts_array, frames_remain, ws_1d_array, w_vec_ptr, &frame_number);
+					if(BW) detect_bw_rec(processed_ptr, rec_array, frames_remain, ws_1d_array, w_vec_ptr, &frame_number);
+					if(GREEDY) detect_greedy(processed_ptr, frames_remain, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
 
 					//cap it off
 					frame_number++;
 
-					//detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
-					//detect_bw_rec_once(zero_frame, rec_array, 1, ws_array, w_vec_ptr, frame_number, &bw_ws_count);
-					detect_greedy(zero_frame, 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+					if (TS) detect_ts_rec(zero_frame, ts_array, 1, ws_1d_array, w_vec_ptr, &frame_number);
+					if (BW) detect_bw_rec(zero_frame, rec_array, 1, ws_1d_array, w_vec_ptr, &frame_number);
+					if (GREEDY) detect_greedy(zero_frame, 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
 
 					//increment processed_ptr appropriately
 					processed_ptr += WIN_SAMPS * frames_remain;
@@ -1396,7 +1418,9 @@ void read_samples_outwins(char* sampbase){
 
 					if (true) {
 						//This is here to provide the final window detection and outputting of the window vector to file.
-						csv_filename = "\.\\partitioning\\window_dump_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+						if (GREEDY) csv_filename = "\.\\partitioning\\window_dump_greedy_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+						if (TS) csv_filename = "\.\\partitioning\\window_dump_duration_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+						if (BW) csv_filename = "\.\\partitioning\\window_dump_bandwidth_" + boost::lexical_cast<std::string>(plot_id)+".csv";
 						window_dump.open(csv_filename);
 						window_dump << "timescale,frequency,bandwidth,whitespace,frame_no\n";
 						std::cout << "Outputting Whitespace Windows" << std::endl;
@@ -1416,6 +1440,7 @@ void read_samples_outwins(char* sampbase){
 					//reset for next block
 					for (int i = 0; i < WIN_SAMPS; i++){
 						ws_array[i][0] = processed_ptr[i]; // <- frame number 0 ;)
+						ws_1d_array[i] = processed_ptr[i];
 					}
 
 					processed_ptr += WIN_SAMPS;
@@ -1433,15 +1458,15 @@ void read_samples_outwins(char* sampbase){
 					}
 
 					//record the remainder of the windows
-					//detect_ts_rec(processed_ptr, ts_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number); //IT IS NOT CURRWINS/AVERAGING
-					//detect_bw_rec(processed_ptr, rec_array, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
-					detect_greedy(processed_ptr, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+					if (TS) detect_ts_rec(processed_ptr, ts_array, (currwins - frames_remain) - 1, ws_1d_array, w_vec_ptr, &frame_number);
+					if (BW) detect_bw_rec(processed_ptr, rec_array, (currwins - frames_remain) - 1, ws_1d_array, w_vec_ptr, &frame_number);
+					if (GREEDY) detect_greedy(processed_ptr, (currwins - frames_remain) - 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
 				}
 				else {
 					//detect(processed_ptr, (currwins / averaging), ws_array, overlap, w_vec_ptr, &frame_number);
-					//detect_ts_rec(processed_ptr, ts_array, currwins, ws_array, w_vec_ptr, &frame_number);
-					//detect_bw_rec(processed_ptr, rec_array, currwins, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
-					detect_greedy(processed_ptr, currwins, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+					if (TS) detect_ts_rec(processed_ptr, ts_array, currwins, ws_1d_array, w_vec_ptr, &frame_number);
+					if (BW) detect_bw_rec(processed_ptr, rec_array, currwins, ws_1d_array, w_vec_ptr, &frame_number);
+					if (GREEDY) detect_greedy(processed_ptr, currwins, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
 					//detect(processed_ptr, ((currwins*samp_overlap) / averaging), ws_array, overlap, w_vec_ptr, &frame_number);
 				}
 			}
@@ -1451,10 +1476,12 @@ void read_samples_outwins(char* sampbase){
 	std::cout << "Finishing up" << std::endl;
 	//Close the samples off
 	frame_number++;
+	
 	//detect_once(ws_frame, 1, ws_array, overlap, w_vec_ptr, frame_number);
-	//detect_ts_rec_once(zero_frame, ts_array, 1, ws_array, w_vec_ptr, frame_number);
-	//detect_bw_rec_once(zero_frame, rec_array, 1, ws_array, w_vec_ptr, frame_number, &bw_ws_count);
-	detect_greedy(zero_frame, 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
+	
+	if (TS) detect_ts_rec(zero_frame, ts_array, 1, ws_1d_array, w_vec_ptr, &frame_number);
+	if (BW) detect_bw_rec(zero_frame, rec_array, 1, ws_1d_array, w_vec_ptr, &frame_number);
+	if (GREEDY) detect_greedy(zero_frame, 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
 
 	if (false) {
 		for (int i = 0; i < MIN5; i++) {
@@ -1475,7 +1502,9 @@ void read_samples_outwins(char* sampbase){
 	if (true) {
 
 		//This is here to provide the final window detection and outputting of the window vector to file.
-		csv_filename = "\.\\partitioning\\window_dump_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+		if (GREEDY) csv_filename = "\.\\partitioning\\window_dump_greedy_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+		if (TS) csv_filename = "\.\\partitioning\\window_dump_duration_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+		if (BW) csv_filename = "\.\\partitioning\\window_dump_bandwidth_" + boost::lexical_cast<std::string>(plot_id)+".csv";
 		window_dump.open(csv_filename);
 		window_dump << "timescale,frequency,bandwidth,whitespace,frame_no\n";
 		std::cout << "Outputting final whitespace windows" << std::endl;
@@ -1503,6 +1532,7 @@ void read_samples_outwins(char* sampbase){
 
 	//bar_plot(&window_vec); //If the end of the data has been reached, then display the data
 }
+
 template<class T>
 void print_vector(std::vector<T> &vect){
 

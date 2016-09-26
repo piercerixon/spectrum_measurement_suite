@@ -26,9 +26,10 @@ void detect_ts(float*, const int, int*, std::vector<window>*, int*);
 void detect_ts_once(unsigned char*, const int, int*, std::vector<window>*, int);
 
 void detect_ts_rec(float*, double*, const int, int*, std::vector<window>*, int*);
+//void detect_ts_rec(float*, double*, const int, int(*)[2], std::vector<window>*, int*); //modified pointer arithmetic to accomodate for the 2D array required for partitioning, yes its a filthy hack.
 void detect_ts_rec_once(unsigned char*, double*, const int, int*, std::vector<window>*, int);
 
-void detect_bw_rec(float*, double*, const int, int*, std::vector<window>*, int*, double*);
+void detect_bw_rec(float*, double*, const int, int*, std::vector<window>*, int*);
 void detect_bw_rec_once(unsigned char*, double*, const int, int*, std::vector<window>*, int, double*);
 
 void detect_greedy(float*, const int, int(*)[2], std::vector<window>*, int*, double*);

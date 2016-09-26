@@ -222,8 +222,8 @@ void procThread::run(){
 		processed_ptr = &processed_ptr_base[(reqFrame - t_rng_min)*WIN_SAMPS];
 		qDebug() << "processed_ptr idx: " << (reqFrame - t_rng_min) << "* WIN_SAMPS";
 
-		prepareFall(processed_ptr, WIN_SAMPS); //THRESHOLDED
-		//preparePlot(processed_ptr, WIN_SAMPS); //RAW POWER LEVELS
+		//prepareFall(processed_ptr, WIN_SAMPS); //THRESHOLDED
+		preparePlot(processed_ptr, WIN_SAMPS); //RAW POWER LEVELS
 
 		//May need to do cheeky cuda things here ... one day, the biggest blocking call is reading the samples in
 
