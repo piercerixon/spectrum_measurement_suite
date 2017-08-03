@@ -78,6 +78,10 @@ boost::condition_variable_any fft_cond, recv_cond, super_cond;
 
 
 const int MIN5 = 5722; //int(300,000/52.4288) ms (@131072 - no averaging)
+const int MIN_5_D = 57220;
+const int HR_D = 686646; //TS=1 = 5.24288E-3
+						//1 Hour duration = 60*60/5.24288E-3 = 686645.5
+const int HR_24_D = 16479492;
 //const int MIN5 = 366208; //@2048 ...
 
 //constructor definition
@@ -121,7 +125,7 @@ void select_file(char* file ) {
 		//File selected
 		std::cout << "Loading file: " << file << std::endl;
 
-#ifndef _DEBUG
+#ifdef _DEBUG
 		std::cout << "Initialising Python Extension" << std::endl;
 		init_py_plot();
 
@@ -130,7 +134,7 @@ void select_file(char* file ) {
 	}
 }
 
-#ifndef _DEBUG
+#ifdef _DEBUG
 
 int python_test() { //This will be deprecated in due time
 	//Test pythoney things n.n
@@ -1150,9 +1154,9 @@ void read_samples_plot(char* sampbase){
 
 void read_samples_outwins(char* sampbase){
 
-	bool GREEDY = false;
+	bool GREEDY = true;
 	bool TS = false;
-	bool BW = true;
+	bool BW = false;
 
 	if (GREEDY == TS && TS == BW) {
 		std::cout << "No algorithm specified, terminating";
@@ -1378,11 +1382,14 @@ void read_samples_outwins(char* sampbase){
 			}
 			else {
 				frame_number++;
-				if (frame_number + currwins >= MIN5*averaging) { //SO HACKY
+				if (frame_number + currwins >= MIN_5_D*(131072/WIN_SAMPS)) { //SO HACKY
+				//if (frame_number + currwins >= HR_24_D*(131072/WIN_SAMPS)) {
 
-					frames_remain = MIN5*averaging - frame_number;
+					frames_remain = MIN_5_D*(131072 / WIN_SAMPS) - frame_number;
+					//frames_remain = HR_D*(131072/WIN_SAMPS) - frame_number;
+					//frames_remain = HR_24_D*(131072/WIN_SAMPS) - frame_number;
 
-					//last of the frames for this 5 minute segment
+					//last of the frames for this segment
 					if(TS) detect_ts_rec(processed_ptr, ts_array, frames_remain, ws_1d_array, w_vec_ptr, &frame_number);
 					if(BW) detect_bw_rec(processed_ptr, rec_array, frames_remain, ws_1d_array, w_vec_ptr, &frame_number);
 					if(GREEDY) detect_greedy(processed_ptr, frames_remain, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
@@ -1399,7 +1406,7 @@ void read_samples_outwins(char* sampbase){
 
 					//need scale, ID, total and double array
 
-
+					//This is here for recording total whitespace values under the old rec_array scheme: DEPRECATED
 					if (false) {
 						for (int i = 0; i < MIN5*averaging; i++) {
 							total_ws += ts_array[i];
@@ -1411,28 +1418,22 @@ void read_samples_outwins(char* sampbase){
 							rec_array[i] *= (i + 1);
 						}
 					}
-					//call plot?
-					//for (int k = 0; k < MIN5; k++) std::cout << ts_array[k] << " ,";
-					//std::cout << "\nTotal: " << total_ws << std::endl;
-					//call_py_plot(ts_array, SCALE, plot_id, total_ws); //It looks like ts_array is going out of scope when this is being plotted T.T
 
-					if (true) {
-						//This is here to provide the final window detection and outputting of the window vector to file.
-						if (GREEDY) csv_filename = "\.\\partitioning\\window_dump_greedy_" + boost::lexical_cast<std::string>(plot_id)+".csv";
-						if (TS) csv_filename = "\.\\partitioning\\window_dump_duration_" + boost::lexical_cast<std::string>(plot_id)+".csv";
-						if (BW) csv_filename = "\.\\partitioning\\window_dump_bandwidth_" + boost::lexical_cast<std::string>(plot_id)+".csv";
-						window_dump.open(csv_filename);
-						window_dump << "timescale,frequency,bandwidth,whitespace,frame_no\n";
-						std::cout << "Outputting Whitespace Windows" << std::endl;
-						for (WINit = window_vec.begin(); WINit < window_vec.end(); WINit++) {
-							window_dump << WINit->timescale << "," << WINit->frequency << "," << WINit->bandwidth << "," << WINit->whitespace << "," << WINit->frame_no << "\n";
-						}
-						window_dump << "\n\n\n" << "Total Whitespace: " << bw_ws_count << "\n";
-						std::cout << "window dump csv " << plot_id << " saved" << std::endl;
-						window_dump.flush();
-						window_dump.close();
+					//This is here to provide the final window detection and outputting of the window vector to file.
+					if (GREEDY) csv_filename = "\.\\partitioning\\window_dump_greedy_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+					if (TS) csv_filename = "\.\\partitioning\\window_dump_duration_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+					if (BW) csv_filename = "\.\\partitioning\\window_dump_bandwidth_" + boost::lexical_cast<std::string>(plot_id)+".csv";
+					window_dump.open(csv_filename);
+					window_dump << "timescale,frequency,bandwidth,whitespace,frame_no\n";
+					std::cout << "Outputting Whitespace Windows" << std::endl;
+					for (WINit = window_vec.begin(); WINit < window_vec.end(); WINit++) {
+						window_dump << WINit->timescale << "," << WINit->frequency << "," << WINit->bandwidth << "," << WINit->whitespace << "," << WINit->frame_no << "\n";
 					}
-					else std::cout << "Skipping window output" << std::endl;
+					window_dump << "\n\n\n" << "Total Whitespace: " << bw_ws_count << "\n";
+					std::cout << "window dump csv " << plot_id << " saved" << std::endl;
+					window_dump.flush();
+					window_dump.close();
+
 					std::cout << "Total Whitespace: " << bw_ws_count << std::endl;
 					bw_ws_count = 0;
 					window_vec.clear(); //remove previous recorded set of windows
@@ -1448,15 +1449,16 @@ void read_samples_outwins(char* sampbase){
 					plot_id++;
 					frame_number = 1;
 
-					//clear previous ts_array
-					for (int i = 0; i < MIN5 * 10; i++) {
-						ts_array[i] = 0;
-					}
+					//clear previous ts_array: DEPRECATED
+					if (false){
+						for (int i = 0; i < MIN5 * 10; i++) {
+							ts_array[i] = 0;
+						}
 
-					for (int i = 0; i < ((WIN_SAMPS / 2) - (WIN_SAMPS / 10)); i++){
-						rec_array[i] = 0;
+						for (int i = 0; i < ((WIN_SAMPS / 2) - (WIN_SAMPS / 10)); i++){
+							rec_array[i] = 0;
+						}
 					}
-
 					//record the remainder of the windows
 					if (TS) detect_ts_rec(processed_ptr, ts_array, (currwins - frames_remain) - 1, ws_1d_array, w_vec_ptr, &frame_number);
 					if (BW) detect_bw_rec(processed_ptr, rec_array, (currwins - frames_remain) - 1, ws_1d_array, w_vec_ptr, &frame_number);
@@ -1483,6 +1485,7 @@ void read_samples_outwins(char* sampbase){
 	if (BW) detect_bw_rec(zero_frame, rec_array, 1, ws_1d_array, w_vec_ptr, &frame_number);
 	if (GREEDY) detect_greedy(zero_frame, 1, ws_array, w_vec_ptr, &frame_number, &bw_ws_count);
 
+	// DEPRECATED
 	if (false) {
 		for (int i = 0; i < MIN5; i++) {
 			total_ws += ts_array[i];

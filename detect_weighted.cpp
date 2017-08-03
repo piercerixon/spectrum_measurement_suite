@@ -60,8 +60,11 @@ void detect_greedy(float* ws_frame, const int num_wins, int(* ws_array)[2], std:
 	int lwb_idx, rwb_idx;
 	int min;
 
-	int min_bw = 66; //at 131072 with 25MHz BW, 66 ~ 12.5khz
-	int min_ts = 10;
+	//int min_bw = 66; //at 131072 with 25MHz BW, 66 ~ 12.5khz
+	//int min_ts = 10;
+
+	int min_bw = 1310; // = 250kHz
+	int min_ts = 190; // = 1second
 
 	//Need to keep an index of currently active windows. Windows that are closed off, will be 'allocated' - removed from the active list and stored. 
 	//There will be no assessment in this algorithm for whether or not the allocated window is the correct choice.

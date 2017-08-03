@@ -342,6 +342,17 @@ void procThread::preparePlot(float* powerArray, int size){
 		min = 0;
 	}
 
+	std::ofstream PSD;
+	PSD.open("PSD.csv");
+	PSD << "avg,max,min\n";
+	std::cout << "Writing PSD to File" << std::endl;
+
+	for (int i = 0; i < plotLength; i++){
+		PSD << plotAvg[i] << "," << plotMax[i] << "," << plotMin[i] << "\n";
+	}
+
+	PSD.close();
+
 	emit plotSignal(plotAvg, plotMax, plotMin);
 
 	qDebug() << "emit plotSignal";

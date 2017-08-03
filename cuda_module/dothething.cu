@@ -59,7 +59,7 @@ void dothething(std::complex<short>* h_samp_arry, float* h_out, const int averag
 	}
 	win_power /= NUM_SAMPS; //normalise the total window power across each sample.
 
-	const float offset = -10 - rx_gain + 10 * std::log10(win_power); //-10 is the MAX power detected by the ADC and take into account the gain of the frontend.
+	const float offset = 10 - rx_gain + 10 * std::log10(win_power); //-10 is the MAX power detected by the ADC and take into account the gain of the frontend.
 
 	//printf("GPU Offset: %f", offset);
 
@@ -278,7 +278,7 @@ static __global__ void avg_out(float* out, cuComplex* d_fft, const int num_wins,
 		for (int i = blockIdx.x * blockDim.x + idx; i < NUM_SAMPS*averaging; i += blockDim.x * gridDim.x){
 
 			out_ptr[((NUM_SAMPS / 2) + i) % NUM_SAMPS] += ( //This is done to correctly flip the fft result
-				10 * log10(abs(d_fft_ptr[i].x * d_fft_ptr[i].x + d_fft_ptr[i].y * d_fft_ptr[i].y) / NUM_SAMPS) //DFT bin magnitude
+				10 * log10(sqrt(d_fft_ptr[i].x * d_fft_ptr[i].x + d_fft_ptr[i].y * d_fft_ptr[i].y) / NUM_SAMPS) //DFT bin magnitude
 				);
 		}
 

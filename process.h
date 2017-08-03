@@ -54,10 +54,15 @@ typedef unsigned int u_int;
 static const float pi = float(std::acos(-1.0));
 #endif
 
+//const int WIN_SAMPS = 2048;
+//const int WIN_SAMPS = 4096;
+//const int WIN_SAMPS = 8192;
+//const int WIN_SAMPS = 16384;
+//const int WIN_SAMPS = 32768;
 //const int WIN_SAMPS = 65536; //temporarly set here to be a definite number
 const int WIN_SAMPS = 131072; //temporarly set here to be a definite number (OMFG THE DAMN THING RAN OUT OF STACK MEMORY LOL)
 //const int WIN_SAMPS = 262144;
-//const int WIN_SAMPS = 2048;
+
 
 //Program conditions for different modes
 static bool DISPLAY = false;
