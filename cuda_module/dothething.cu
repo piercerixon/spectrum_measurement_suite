@@ -59,9 +59,9 @@ void dothething(std::complex<short>* h_samp_arry, float* h_out, const int averag
 	}
 	win_power /= NUM_SAMPS; //normalise the total window power across each sample.
 
-	const float offset = 10 - rx_gain + 10 * std::log10(win_power); //-10 is the MAX power detected by the ADC and take into account the gain of the frontend.
+	const float offset = 0 - rx_gain + 10 * std::log10(win_power); //10 is the MAX power detected by the ADC and take into account the gain of the frontend.
 
-	//printf("GPU Offset: %f", offset);
+	printf("GPU Offset: %f", offset);
 
 	//allocate the memory for the GPU
 	cudaStatus = cudaMalloc((float**)&d_out, sizeof(float)*NUM_SAMPS * num_wins / averaging);

@@ -6,6 +6,8 @@
 #include <QDebug>
 #include <iostream>
 
+int PSD_ctr = 0;
+
 //Constructor
 procThread::procThread(QObject* parent) : QThread(parent) {
 
@@ -342,16 +344,25 @@ void procThread::preparePlot(float* powerArray, int size){
 		min = 0;
 	}
 
+	// Output the computed power spectrum to file. 
 	std::ofstream PSD;
-	PSD.open("PSD.csv");
-	PSD << "avg,max,min\n";
-	std::cout << "Writing PSD to File" << std::endl;
+	std::string PSDname = "PSD_" + std::to_string(PSD_ctr) + ".csv";
+	PSD.open(PSDname);
+	//PSD << "avg,max,min\n";
+	PSD << "bin,bin_power\n";
+	qDebug() << "Writing PSD to File";
+	qDebug() << size;
 
-	for (int i = 0; i < plotLength; i++){
-		PSD << plotAvg[i] << "," << plotMax[i] << "," << plotMin[i] << "\n";
+//	for (int i = 0; i < plotLength; i++){
+//		PSD << plotAvg[i] << "," << plotMax[i] << "," << plotMin[i] << "\n";
+//	}
+
+	for (int i = 0; i < size; i++){
+		PSD << std::to_string(i) << "," << powerArray[i] << "\n";
 	}
 
 	PSD.close();
+	PSD_ctr++; 
 
 	emit plotSignal(plotAvg, plotMax, plotMin);
 

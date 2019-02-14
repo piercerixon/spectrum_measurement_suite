@@ -46,7 +46,7 @@ void gui::initUi() {
 
 	//fft_plot->yAxis->setScaleType(fft_plot->yAxis->stLogarithmic);
 	//fft_plot->yAxis->setScaleLogBase(10);
-	fft_plot->yAxis->setRange(-100, -30);
+	fft_plot->yAxis->setRange(-110, -40);
 	fft_plot->xAxis->setRange(0, 2048);
 
 

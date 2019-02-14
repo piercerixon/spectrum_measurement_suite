@@ -70,7 +70,7 @@ void perform_fft(std::complex<short>* h_samp_arry, float* h_out, const int resol
 	}
 	win_power /= resolution; //normalise the total window power across each sample.
 
-	const float offset = -10 - rx_gain + 10 * std::log10(win_power); //-10 is the MAX power detected by the ADC and take into account the gain of the frontend.
+	const float offset = 10 - rx_gain + 10 * std::log10(win_power); //10 is the MAX power detected by the ADC and take into account the gain of the frontend.
 
 	//printf("GPU Offset: %f", offset);
 
@@ -275,7 +275,7 @@ static __global__ void avg_out(float* out, cuComplex* d_fft, const int num_wins,
 	int idx = threadIdx.x;
 	float* out_ptr = &out[0];
 	cuComplex* d_fft_ptr = &d_fft[0];
-	const float threshold = -113;
+	const float threshold = -96;
 
 	bool THRESHOLD = true;
 
@@ -312,7 +312,7 @@ static __global__ void avg_out_filter(float* out, cuComplex* d_fft, const int nu
 	int idx = threadIdx.x;
 	float* out_ptr = &out[0];
 	cuComplex* d_fft_ptr = &d_fft[0];
-	const float threshold = -116;
+	const float threshold = -96;
 	const int filter_level = 13; //normally 16 for fiveby, 13 for aggressive
 
 	bool THRESHOLD = true;
